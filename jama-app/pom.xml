@@ -7,17 +7,15 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>jama-decompiler</artifactId>
+    <artifactId>jama-app</artifactId>
     <packaging>jar</packaging>
 
-    <name>jama-decompiler</name>
-
+    <name>jama-app</name>
     <dependencies>
-        <!-- https://mvnrepository.com/artifact/com.jetbrains.intellij.java/java-decompiler-engine -->
         <dependency>
-            <groupId>com.jetbrains.intellij.java</groupId>
-            <artifactId>java-decompiler-engine</artifactId>
-            <version>233.13135.103</version>
+            <groupId>nl.jiankai</groupId>
+            <artifactId>jama-miner</artifactId>
+            <version>1.0-SNAPSHOT</version>
         </dependency>
     </dependencies>
 </project>

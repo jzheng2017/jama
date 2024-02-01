@@ -1,4 +1,4 @@
-package nl.jiankai.impl;
+package nl.jiankai.refactoringminer;
 
 import gr.uom.java.xmi.diff.*;
 import nl.jiankai.api.*;
@@ -14,25 +14,26 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
-public class RefactoringMinerRefactoringMiner implements RefactoringMiner {
+public class RefactoringMinerImpl implements RefactoringMiner {
     @Override
     public Collection<Refactoring> detectRefactoringBetweenCommit(GitRepository gitRepository, String startCommitId, String endCommitId, Set<RefactoringType> refactoringTypes) {
         List<Refactoring> detectedRefactorings = new ArrayList<>();
         GitService gitService = new GitServiceImpl();
         GitHistoryRefactoringMiner gitHistoryRefactoringMiner = new GitHistoryRefactoringMinerImpl();
         try (Repository repository = gitService.openRepository(gitRepository.getLocalPath().getAbsolutePath())) {
-
             gitHistoryRefactoringMiner.detectBetweenCommits(repository, startCommitId, endCommitId, new RefactoringHandler() {
+                int sequence = 0;
                 @Override
                 public void handle(String commitId, List<org.refactoringminer.api.Refactoring> refactorings) {
                     detectedRefactorings
                             .addAll(
                                     refactorings
                                             .stream()
-                                            .filter(r -> refactoringTypes.contains(convertRefactoringType(r.getRefactoringType())))
-                                            .map(r -> new Refactoring(commitId, getElementName(r), convertRefactoringType(r.getRefactoringType()), getPackagePath(r), getPosition(r), getFilePath(r)))
+                                            .filter(r -> refactoringTypes.isEmpty() || refactoringTypes.contains(convertRefactoringType(r.getRefactoringType())))
+                                            .map(r -> new Refactoring(commitId, sequence, getCodeElement(r), null, convertRefactoringType(r.getRefactoringType())))
                                             .toList()
                             );
+                    sequence++;
                 }
             });
 
@@ -42,6 +43,9 @@ public class RefactoringMinerRefactoringMiner implements RefactoringMiner {
         }
     }
 
+    private Refactoring.CodeElement getCodeElement(org.refactoringminer.api.Refactoring refactoring) {
+        return new Refactoring.CodeElement(getElementName(refactoring), getPackagePath(refactoring), getPosition(refactoring), getFilePath(refactoring));
+    }
     private String getFilePath(org.refactoringminer.api.Refactoring refactoring) {
         if (refactoring instanceof ChangeReturnTypeRefactoring crtr) {
             return crtr.getOperationBefore().getLocationInfo().getFilePath();

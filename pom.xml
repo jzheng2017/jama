@@ -34,7 +34,8 @@
     <packaging>pom</packaging>
     <modules>
         <module>jama-core</module>
-        <module>jama-decompiler</module>
         <module>jama-miner</module>
+        <module>jama-app</module>
+        <module>jama-transformer</module>
     </modules>
 </project>
