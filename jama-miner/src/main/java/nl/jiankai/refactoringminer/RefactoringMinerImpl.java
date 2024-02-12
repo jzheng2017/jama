@@ -30,7 +30,7 @@ public class RefactoringMinerImpl implements RefactoringMiner {
                                     refactorings
                                             .stream()
                                             .filter(r -> refactoringTypes.isEmpty() || refactoringTypes.contains(convertRefactoringType(r.getRefactoringType())))
-                                            .map(r -> new Refactoring(commitId, sequence, getCodeElement(r), null, convertRefactoringType(r.getRefactoringType())))
+                                            .map(r -> new Refactoring(commitId, sequence, getBeforeElement(r), getAfterElement(r), convertRefactoringType(r.getRefactoringType())))
                                             .toList()
                             );
                     sequence++;
@@ -43,10 +43,15 @@ public class RefactoringMinerImpl implements RefactoringMiner {
         }
     }
 
-    private Refactoring.CodeElement getCodeElement(org.refactoringminer.api.Refactoring refactoring) {
-        return new Refactoring.CodeElement(getElementName(refactoring), getPackagePath(refactoring), getPosition(refactoring), getFilePath(refactoring));
+    private Refactoring.CodeElement getBeforeElement(org.refactoringminer.api.Refactoring refactoring) {
+        return new Refactoring.CodeElement(getBeforeElementName(refactoring), getBeforePackagePath(refactoring), getBeforePosition(refactoring), getBeforeFilePath(refactoring));
     }
-    private String getFilePath(org.refactoringminer.api.Refactoring refactoring) {
+
+    private Refactoring.CodeElement getAfterElement(org.refactoringminer.api.Refactoring refactoring) {
+        return new Refactoring.CodeElement(getAfterElementName(refactoring), getAfterPackagePath(refactoring), getAfterPosition(refactoring), getAfterFilePath(refactoring));
+    }
+
+    private String getBeforeFilePath(org.refactoringminer.api.Refactoring refactoring) {
         if (refactoring instanceof ChangeReturnTypeRefactoring crtr) {
             return crtr.getOperationBefore().getLocationInfo().getFilePath();
         } else if (refactoring instanceof AddParameterRefactoring apr) {
@@ -62,7 +67,7 @@ public class RefactoringMinerImpl implements RefactoringMiner {
         return "";
     }
 
-    private Position getPosition(org.refactoringminer.api.Refactoring refactoring) {
+    private Position getBeforePosition(org.refactoringminer.api.Refactoring refactoring) {
         CodeRange codeRange = null;
         if (refactoring instanceof ChangeReturnTypeRefactoring crtr) {
             codeRange = crtr.getOperationBefore().codeRange();
@@ -83,7 +88,7 @@ public class RefactoringMinerImpl implements RefactoringMiner {
         }
     }
 
-    private String getElementName(org.refactoringminer.api.Refactoring refactoring) {
+    private String getBeforeElementName(org.refactoringminer.api.Refactoring refactoring) {
         if (refactoring instanceof ChangeReturnTypeRefactoring crtr) {
             return crtr.getOperationBefore().getName();
         } else if (refactoring instanceof AddParameterRefactoring apr) {
@@ -99,7 +104,7 @@ public class RefactoringMinerImpl implements RefactoringMiner {
         return "";
     }
 
-    private String getPackagePath(org.refactoringminer.api.Refactoring refactoring) {
+    private String getBeforePackagePath(org.refactoringminer.api.Refactoring refactoring) {
         if (refactoring instanceof ChangeReturnTypeRefactoring crtr) {
             return crtr.getOperationBefore().getClassName();
         } else if (refactoring instanceof AddParameterRefactoring apr) {
@@ -114,6 +119,76 @@ public class RefactoringMinerImpl implements RefactoringMiner {
 
         return "";
     }
+
+    private String getAfterFilePath(org.refactoringminer.api.Refactoring refactoring) {
+        if (refactoring instanceof ChangeReturnTypeRefactoring crtr) {
+            return crtr.getOperationAfter().getLocationInfo().getFilePath();
+        } else if (refactoring instanceof AddParameterRefactoring apr) {
+            return apr.getOperationAfter().getLocationInfo().getFilePath();
+        } else if (refactoring instanceof RemoveParameterRefactoring rpr) {
+            return rpr.getOperationAfter().getLocationInfo().getFilePath();
+        } else if (refactoring instanceof ChangeVariableTypeRefactoring cvtr) {
+            return cvtr.getOperationAfter().getLocationInfo().getFilePath();
+        } else if (refactoring instanceof RenameOperationRefactoring ror) {
+            return ror.getRenamedOperation().getLocationInfo().getFilePath();
+        }
+
+        return "";
+    }
+
+    private Position getAfterPosition(org.refactoringminer.api.Refactoring refactoring) {
+        CodeRange codeRange = null;
+        if (refactoring instanceof ChangeReturnTypeRefactoring crtr) {
+            codeRange = crtr.getOperationAfter().codeRange();
+        } else if (refactoring instanceof AddParameterRefactoring apr) {
+            codeRange = apr.getOperationAfter().codeRange();
+        } else if (refactoring instanceof RemoveParameterRefactoring rpr) {
+            codeRange = rpr.getOperationAfter().codeRange();
+        } else if (refactoring instanceof ChangeVariableTypeRefactoring cvtr) {
+            codeRange = cvtr.getOperationAfter().codeRange();
+        } else if (refactoring instanceof RenameOperationRefactoring ror) {
+            codeRange = ror.getTargetOperationCodeRangeAfterRename();
+        }
+
+        if (codeRange == null) {
+            return null;
+        } else {
+            return new Position(codeRange.getStartColumn(), codeRange.getEndColumn(), codeRange.getStartLine(), codeRange.getEndLine());
+        }
+    }
+
+    private String getAfterElementName(org.refactoringminer.api.Refactoring refactoring) {
+        if (refactoring instanceof ChangeReturnTypeRefactoring crtr) {
+            return crtr.getOperationAfter().getName();
+        } else if (refactoring instanceof AddParameterRefactoring apr) {
+            return apr.getOperationAfter().getName();
+        } else if (refactoring instanceof RemoveParameterRefactoring rpr) {
+            return rpr.getOperationAfter().getName();
+        } else if (refactoring instanceof ChangeVariableTypeRefactoring cvtr) {
+            return cvtr.getOperationAfter().getName();
+        } else if (refactoring instanceof RenameOperationRefactoring ror) {
+            return ror.getRenamedOperation().getName();
+        }
+
+        return "";
+    }
+
+    private String getAfterPackagePath(org.refactoringminer.api.Refactoring refactoring) {
+        if (refactoring instanceof ChangeReturnTypeRefactoring crtr) {
+            return crtr.getOperationAfter().getClassName();
+        } else if (refactoring instanceof AddParameterRefactoring apr) {
+            return apr.getOperationAfter().getClassName();
+        } else if (refactoring instanceof RemoveParameterRefactoring rpr) {
+            return rpr.getOperationAfter().getClassName();
+        } else if (refactoring instanceof ChangeVariableTypeRefactoring cvtr) {
+            return cvtr.getOperationAfter().getClassName();
+        } else if (refactoring instanceof RenameOperationRefactoring ror) {
+            return ror.getRenamedOperation().getClassName();
+        }
+
+        return "";
+    }
+
 
 
     private RefactoringType convertRefactoringType(org.refactoringminer.api.RefactoringType type) {

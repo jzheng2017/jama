@@ -1,8 +1,5 @@
 package nl.jiankai.api;
 
-public record ApiMapping(Element original, Element target, RefactoringType refactoringType, String version) {
+public record ApiMapping(Refactoring.CodeElement original, Refactoring.CodeElement target, RefactoringType refactoringType, String version) {
 
-    public record Element() {
-
-    }
 }
