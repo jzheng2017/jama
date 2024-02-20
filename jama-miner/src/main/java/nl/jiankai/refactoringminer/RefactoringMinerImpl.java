@@ -9,12 +9,19 @@ import org.refactoringminer.api.RefactoringHandler;
 import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 import org.refactoringminer.util.GitServiceImpl;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
 public class RefactoringMinerImpl implements RefactoringMiner {
+    private final MethodQuery methodQuery;
+
+    public RefactoringMinerImpl(MethodQuery methodQuery) {
+        this.methodQuery = methodQuery;
+    }
+
     @Override
     public Collection<Refactoring> detectRefactoringBetweenCommit(GitRepository gitRepository, String startCommitId, String endCommitId, Set<RefactoringType> refactoringTypes) {
         List<Refactoring> detectedRefactorings = new ArrayList<>();
@@ -22,7 +29,7 @@ public class RefactoringMinerImpl implements RefactoringMiner {
         GitHistoryRefactoringMiner gitHistoryRefactoringMiner = new GitHistoryRefactoringMinerImpl();
         try (Repository repository = gitService.openRepository(gitRepository.getLocalPath().getAbsolutePath())) {
             gitHistoryRefactoringMiner.detectBetweenCommits(repository, startCommitId, endCommitId, new RefactoringHandler() {
-                int sequence = 0;
+                int sequence = 1;
                 @Override
                 public void handle(String commitId, List<org.refactoringminer.api.Refactoring> refactorings) {
                     detectedRefactorings
@@ -44,11 +51,17 @@ public class RefactoringMinerImpl implements RefactoringMiner {
     }
 
     private Refactoring.CodeElement getBeforeElement(org.refactoringminer.api.Refactoring refactoring) {
-        return new Refactoring.CodeElement(getBeforeElementName(refactoring), getBeforePackagePath(refactoring), getBeforePosition(refactoring), getBeforeFilePath(refactoring));
+        String filePath = getBeforeFilePath(refactoring);
+        Position position = getBeforePosition(refactoring);
+        //TODO fix fully qualified
+        return new Refactoring.CodeElement(getBeforeElementName(refactoring), getBeforePackagePath(refactoring), methodQuery.getMethod(null, position).map(Method::fullyQualifiedSignature).orElse(null), position, filePath);
     }
 
     private Refactoring.CodeElement getAfterElement(org.refactoringminer.api.Refactoring refactoring) {
-        return new Refactoring.CodeElement(getAfterElementName(refactoring), getAfterPackagePath(refactoring), getAfterPosition(refactoring), getAfterFilePath(refactoring));
+        String filePath = getAfterFilePath(refactoring);
+        Position position = getAfterPosition(refactoring);
+        //TODO fix fully qualified
+        return new Refactoring.CodeElement(getAfterElementName(refactoring), getAfterPackagePath(refactoring), methodQuery.getMethod(null, position).map(Method::fullyQualifiedSignature).orElse(null), position, filePath);
     }
 
     private String getBeforeFilePath(org.refactoringminer.api.Refactoring refactoring) {
@@ -194,8 +207,11 @@ public class RefactoringMinerImpl implements RefactoringMiner {
     private RefactoringType convertRefactoringType(org.refactoringminer.api.RefactoringType type) {
         return switch (type) {
             case RENAME_METHOD -> RefactoringType.METHOD_NAME;
-            case CHANGE_RETURN_TYPE, CHANGE_PARAMETER_TYPE, REMOVE_PARAMETER, ADD_PARAMETER ->
-                    RefactoringType.METHOD_SIGNATURE;
+            case CHANGE_RETURN_TYPE, CHANGE_PARAMETER_TYPE, REMOVE_PARAMETER, ADD_PARAMETER -> RefactoringType.METHOD_SIGNATURE;
+            case ENCAPSULATE_ATTRIBUTE -> RefactoringType.ENCAPSULATE_ATTRIBUTE;
+            case MOVE_CLASS -> RefactoringType.MOVE_CLASS;
+            case RENAME_CLASS -> RefactoringType.CLASS_NAME;
+            case RENAME_PACKAGE -> RefactoringType.PACKAGE_NAME;
             default -> RefactoringType.UNKNOWN;
         };
     }
