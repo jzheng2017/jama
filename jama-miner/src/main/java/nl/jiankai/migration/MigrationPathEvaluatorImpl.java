@@ -16,14 +16,14 @@ public class MigrationPathEvaluatorImpl implements MigrationPathEvaluator {
                 .filter(refactoring -> refactoring.refactoringType().isMethodRefactoring())
                 .collect(Collectors.groupingBy(Refactoring::sequence));
         List<Migration> migrations = new ArrayList<>();
-
+        int maxSeq = methods.keySet().stream().max(Integer::compareTo).orElse(1);
         for (Integer sequence : methods.keySet()) {
-            migrations.addAll(evalBySequence(methods, sequence));
+            migrations.addAll(evalBySequence(methods, sequence, maxSeq));
         }
         return migrations;
     }
 
-    private List<Migration> evalBySequence(Map<Integer, List<Refactoring>> refactoredBySequence, int sequence) {
+    private List<Migration> evalBySequence(Map<Integer, List<Refactoring>> refactoredBySequence, int sequence, int maxSeq) {
         List<Refactoring> starting = refactoredBySequence.get(sequence);
         List<Migration> migrations = new ArrayList<>();
 
@@ -33,8 +33,12 @@ public class MigrationPathEvaluatorImpl implements MigrationPathEvaluator {
             mappings.add(lastMapping);
             int current = sequence;
 
-            while (current < refactoredBySequence.size()) {
+            while (current <= maxSeq) {
                 List<Refactoring> nextRefactorings = refactoredBySequence.get(current + 1);
+                if (nextRefactorings == null) {
+                    current++;
+                    continue;
+                }
 
                 for (Refactoring ref : nextRefactorings) {
                     if (ref.before().equals(lastMapping.target())) {

@@ -30,17 +30,21 @@ public class RefactoringMinerImpl implements RefactoringMiner {
         try (Repository repository = gitService.openRepository(gitRepository.getLocalPath().getAbsolutePath())) {
             gitHistoryRefactoringMiner.detectBetweenCommits(repository, startCommitId, endCommitId, new RefactoringHandler() {
                 int sequence = 1;
+
                 @Override
                 public void handle(String commitId, List<org.refactoringminer.api.Refactoring> refactorings) {
-                    detectedRefactorings
-                            .addAll(
-                                    refactorings
-                                            .stream()
-                                            .filter(r -> refactoringTypes.isEmpty() || refactoringTypes.contains(convertRefactoringType(r.getRefactoringType())))
-                                            .map(r -> new Refactoring(commitId, sequence, getBeforeElement(r), getAfterElement(r), convertRefactoringType(r.getRefactoringType())))
-                                            .toList()
-                            );
-                    sequence++;
+                    List<Refactoring> foundRefactoring = refactorings
+                            .stream()
+                            .filter(r -> {
+                                RefactoringType refactoringType = convertRefactoringType(r.getRefactoringType());
+                                return refactoringType != RefactoringType.UNKNOWN && (refactoringTypes.isEmpty() || refactoringTypes.contains(refactoringType));
+                            })
+                            .map(r -> new Refactoring(commitId, sequence, getBeforeElement(r), getAfterElement(r), convertRefactoringType(r.getRefactoringType())))
+                            .toList();
+                    if (!foundRefactoring.isEmpty()) {
+                        detectedRefactorings.addAll(foundRefactoring);
+                        sequence++;
+                    }
                 }
             });
 
@@ -53,15 +57,29 @@ public class RefactoringMinerImpl implements RefactoringMiner {
     private Refactoring.CodeElement getBeforeElement(org.refactoringminer.api.Refactoring refactoring) {
         String filePath = getBeforeFilePath(refactoring);
         Position position = getBeforePosition(refactoring);
-        //TODO fix fully qualified
-        return new Refactoring.CodeElement(getBeforeElementName(refactoring), getBeforePackagePath(refactoring), methodQuery.getMethod(null, position).map(Method::fullyQualifiedSignature).orElse(null), position, filePath);
+        return new Refactoring.CodeElement(getBeforeElementName(refactoring), getBeforePackagePath(refactoring), null, position, filePath);
     }
 
     private Refactoring.CodeElement getAfterElement(org.refactoringminer.api.Refactoring refactoring) {
         String filePath = getAfterFilePath(refactoring);
         Position position = getAfterPosition(refactoring);
-        //TODO fix fully qualified
-        return new Refactoring.CodeElement(getAfterElementName(refactoring), getAfterPackagePath(refactoring), methodQuery.getMethod(null, position).map(Method::fullyQualifiedSignature).orElse(null), position, filePath);
+        return new Refactoring.CodeElement(getAfterElementName(refactoring), getAfterPackagePath(refactoring), null, position, filePath);
+    }
+
+    private String getFullyQualifiedClassName(org.refactoringminer.api.Refactoring refactoring) {
+        if (refactoring instanceof ChangeReturnTypeRefactoring crtr) {
+            return crtr.getOperationBefore().getClassName();
+        } else if (refactoring instanceof AddParameterRefactoring apr) {
+            return apr.getOperationBefore().getClassName();
+        } else if (refactoring instanceof RemoveParameterRefactoring rpr) {
+            return rpr.getOperationBefore().getClassName();
+        } else if (refactoring instanceof ChangeVariableTypeRefactoring cvtr) {
+            return cvtr.getOperationBefore().getClassName();
+        } else if (refactoring instanceof RenameOperationRefactoring ror) {
+            return ror.getOriginalOperation().getClassName();
+        }
+
+        return "";
     }
 
     private String getBeforeFilePath(org.refactoringminer.api.Refactoring refactoring) {
@@ -203,11 +221,13 @@ public class RefactoringMinerImpl implements RefactoringMiner {
     }
 
 
-
     private RefactoringType convertRefactoringType(org.refactoringminer.api.RefactoringType type) {
         return switch (type) {
             case RENAME_METHOD -> RefactoringType.METHOD_NAME;
-            case CHANGE_RETURN_TYPE, CHANGE_PARAMETER_TYPE, REMOVE_PARAMETER, ADD_PARAMETER -> RefactoringType.METHOD_SIGNATURE;
+            case CHANGE_RETURN_TYPE -> RefactoringType.CHANGE_RETURN_TYPE;
+            case CHANGE_PARAMETER_TYPE -> RefactoringType.CHANGE_PARAMETER_TYPE;
+            case REMOVE_PARAMETER -> RefactoringType.REMOVE_PARAMETER;
+            case ADD_PARAMETER -> RefactoringType.ADD_PARAMETER;
             case ENCAPSULATE_ATTRIBUTE -> RefactoringType.ENCAPSULATE_ATTRIBUTE;
             case MOVE_CLASS -> RefactoringType.MOVE_CLASS;
             case RENAME_CLASS -> RefactoringType.CLASS_NAME;

@@ -5,6 +5,7 @@ import nl.jiankai.impl.CompositeProjectFactory;
 import nl.jiankai.migration.MigrationPathEvaluatorImpl;
 import nl.jiankai.refactoringminer.RefactoringMinerImpl;
 import nl.jiankai.impl.git.JGitRepositoryFactory;
+import nl.jiankai.spoon.SpoonMethodCallTransformer;
 import nl.jiankai.spoon.SpoonMethodQuery;
 
 import java.io.File;
@@ -14,9 +15,10 @@ import java.util.Optional;
 
 public class Jama {
     public static void main(String[] args) {
-        GitRepository gitRepository = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/plugin-test-repo-2"));
-        Migrator migrator = new Migrator();
-        migrator.migrate(gitRepository, "7fdfc95d", "2714762");
+        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/plugin-test-repo-2"));
+        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-text"));
+        Migrator migrator = new Migrator(new File("/home/jiankai/test"));
+        migrator.migrate(migratedProject, dependencyProject, "cb85bed", "82aecf3");
 
 //        Project project = new CompositeProjectFactory().createProject(new File("/home/jiankai/IdeaProjects/plugin-test-repo-2"));
 //

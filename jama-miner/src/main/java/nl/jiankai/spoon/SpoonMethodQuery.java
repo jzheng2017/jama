@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Optional;
 
 public class SpoonMethodQuery implements MethodQuery {
-    private Project project;
+    private final Project project;
 
     public SpoonMethodQuery(Project project) {
         this.project = project;

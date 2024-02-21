@@ -1,6 +1,6 @@
 package nl.jiankai.api;
 
-public interface MethodCallTransformer {
+public interface MethodCallTransformer extends Transformer {
     /**
      * Renames the method name of all method calls matching the provided fully qualified name to a new name
      * @param originalFullyQualifiedName the fully qualified name of the original method that is being called
