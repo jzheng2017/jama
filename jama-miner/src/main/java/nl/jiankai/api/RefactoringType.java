@@ -14,6 +14,7 @@ public enum RefactoringType {
     REMOVE_CLASS,
     PACKAGE_NAME,
     MOVE_RENAME_CLASS,
+    REORDER_PARAMETER,
     UNKNOWN;
 
     public boolean isMethodRefactoring() {
@@ -23,7 +24,8 @@ public enum RefactoringType {
                                 CHANGE_PARAMETER_TYPE,
                                 CHANGE_RETURN_TYPE,
                                 ADD_PARAMETER,
-                                REMOVE_PARAMETER
+                                REMOVE_PARAMETER,
+                                REORDER_PARAMETER
                         )
                 .contains(this);
     }

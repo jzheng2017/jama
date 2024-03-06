@@ -67,6 +67,6 @@ public class MigrationPathEvaluatorImpl implements MigrationPathEvaluator {
     }
 
     private ApiMapping toApiMapping(Refactoring refactoring) {
-        return new ApiMapping(refactoring.before(), refactoring.after(), refactoring.refactoringType(), refactoring.commitId());
+        return new ApiMapping(refactoring.before(), refactoring.after(), refactoring.refactoringType(), refactoring.commitId(), refactoring.context());
     }
 }

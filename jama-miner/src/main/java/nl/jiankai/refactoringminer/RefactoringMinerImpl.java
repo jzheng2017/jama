@@ -2,6 +2,7 @@ package nl.jiankai.refactoringminer;
 
 import gr.uom.java.xmi.UMLParameter;
 import gr.uom.java.xmi.UMLType;
+import gr.uom.java.xmi.decomposition.VariableDeclaration;
 import gr.uom.java.xmi.diff.*;
 import nl.jiankai.api.*;
 import org.eclipse.jgit.lib.Repository;
@@ -12,10 +13,7 @@ import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 import org.refactoringminer.util.GitServiceImpl;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class RefactoringMinerImpl implements RefactoringMiner {
@@ -42,12 +40,22 @@ public class RefactoringMinerImpl implements RefactoringMiner {
                                 RefactoringType refactoringType = convertRefactoringType(r.getRefactoringType());
                                 return refactoringType != RefactoringType.UNKNOWN && (refactoringTypes.isEmpty() || refactoringTypes.contains(refactoringType));
                             })
-                            .map(r -> new Refactoring(commitId, sequence, getBeforeElement(r), getAfterElement(r), convertRefactoringType(r.getRefactoringType())))
+                            .map(r -> new Refactoring(commitId, sequence, getBeforeElement(r), getAfterElement(r), convertRefactoringType(r.getRefactoringType()), getContext(r)))
                             .toList();
                     if (!foundRefactoring.isEmpty()) {
                         detectedRefactorings.addAll(foundRefactoring);
                         sequence++;
                     }
+                }
+
+                private Map<String, Object> getContext(org.refactoringminer.api.Refactoring r) {
+                    if (r instanceof ReorderParameterRefactoring ropr) {
+                        return Map.of(
+                                "before", ropr.getParametersBefore().stream().map(VariableDeclaration::getVariableName).toList(),
+                                "after", ropr.getParametersAfter().stream().map(VariableDeclaration::getVariableName).toList()
+                        );
+                    }
+                    return new HashMap<>();
                 }
             });
 
@@ -86,6 +94,8 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             parameters += cvtr.getOperationBefore().getParameterTypeList().stream().map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
         } else if (refactoring instanceof RenameOperationRefactoring ror) {
             parameters += ror.getOriginalOperation().getParameters().stream().filter(m -> "in".equals(m.getKind())).map(UMLParameter::getType).map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+        } else if (refactoring instanceof ReorderParameterRefactoring ropr) {
+            parameters += ropr.getParametersBefore().stream().map(VariableDeclaration::getType).map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
         }
 
         return parameters + ")";
@@ -108,6 +118,8 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             parameters += cvtr.getOperationAfter().getParameterTypeList().stream().map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
         } else if (refactoring instanceof RenameOperationRefactoring ror) {
             parameters += ror.getRenamedOperation().getParameters().stream().filter(m -> "in".equals(m.getKind())).map(UMLParameter::getType).map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+        } else if (refactoring instanceof ReorderParameterRefactoring ropr) {
+            parameters += ropr.getParametersAfter().stream().map(VariableDeclaration::getType).map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
         }
 
         return parameters + ")";
@@ -124,6 +136,8 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             return cvtr.getOperationBefore().getClassName();
         } else if (refactoring instanceof RenameOperationRefactoring ror) {
             return ror.getOriginalOperation().getClassName();
+        } else if (refactoring instanceof ReorderParameterRefactoring ropr) {
+            return ropr.getOperationBefore().getClassName();
         }
 
         return "";
@@ -140,6 +154,8 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             return cvtr.getOperationBefore().getLocationInfo().getFilePath();
         } else if (refactoring instanceof RenameOperationRefactoring ror) {
             return ror.getOriginalOperation().getLocationInfo().getFilePath();
+        } else if (refactoring instanceof ReorderParameterRefactoring ropr) {
+            return ropr.getOperationBefore().getLocationInfo().getFilePath();
         }
 
         return "";
@@ -157,6 +173,8 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             codeRange = cvtr.getOperationBefore().codeRange();
         } else if (refactoring instanceof RenameOperationRefactoring ror) {
             codeRange = ror.getSourceOperationCodeRangeBeforeRename();
+        } else if (refactoring instanceof ReorderParameterRefactoring ropr) {
+            codeRange = ropr.getOperationBefore().codeRange();
         }
 
         if (codeRange == null) {
@@ -177,6 +195,8 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             return cvtr.getOperationBefore().getName();
         } else if (refactoring instanceof RenameOperationRefactoring ror) {
             return ror.getOriginalOperation().getName();
+        }  else if (refactoring instanceof ReorderParameterRefactoring ropr) {
+            return ropr.getOperationBefore().getName();
         }
 
         return "";
@@ -193,6 +213,8 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             return cvtr.getOperationBefore().getClassName();
         } else if (refactoring instanceof RenameOperationRefactoring ror) {
             return ror.getOriginalOperation().getClassName();
+        }  else if (refactoring instanceof ReorderParameterRefactoring ropr) {
+            return ropr.getOperationBefore().getClassName();
         }
 
         return "";
@@ -209,6 +231,8 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             return cvtr.getOperationAfter().getLocationInfo().getFilePath();
         } else if (refactoring instanceof RenameOperationRefactoring ror) {
             return ror.getRenamedOperation().getLocationInfo().getFilePath();
+        }  else if (refactoring instanceof ReorderParameterRefactoring ropr) {
+            return ropr.getOperationAfter().getClassName();
         }
 
         return "";
@@ -226,6 +250,8 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             codeRange = cvtr.getOperationAfter().codeRange();
         } else if (refactoring instanceof RenameOperationRefactoring ror) {
             codeRange = ror.getTargetOperationCodeRangeAfterRename();
+        }  else if (refactoring instanceof ReorderParameterRefactoring ropr) {
+            codeRange = ropr.getOperationBefore().codeRange();
         }
 
         if (codeRange == null) {
@@ -246,6 +272,8 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             return cvtr.getOperationAfter().getName();
         } else if (refactoring instanceof RenameOperationRefactoring ror) {
             return ror.getRenamedOperation().getName();
+        }  else if (refactoring instanceof ReorderParameterRefactoring ropr) {
+            return ropr.getOperationAfter().getName();
         }
 
         return "";
@@ -262,6 +290,8 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             return cvtr.getOperationAfter().getClassName();
         } else if (refactoring instanceof RenameOperationRefactoring ror) {
             return ror.getRenamedOperation().getClassName();
+        }  else if (refactoring instanceof ReorderParameterRefactoring ropr) {
+            return ropr.getOperationAfter().getClassName();
         }
 
         return "";
@@ -279,6 +309,7 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             case MOVE_CLASS -> RefactoringType.MOVE_CLASS;
             case RENAME_CLASS -> RefactoringType.CLASS_NAME;
             case RENAME_PACKAGE -> RefactoringType.PACKAGE_NAME;
+            case REORDER_PARAMETER -> RefactoringType.REORDER_PARAMETER;
             default -> RefactoringType.UNKNOWN;
         };
     }
