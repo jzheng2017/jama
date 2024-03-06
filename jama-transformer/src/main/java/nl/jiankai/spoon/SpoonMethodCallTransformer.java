@@ -26,43 +26,43 @@ public class SpoonMethodCallTransformer implements MethodCallTransformer {
     }
 
     @Override
-    public void rename(String originalFullyQualifiedName, String newName) {
+    public void rename(String originalSignature, String newName) {
         processors.add(new AbstractProcessor<CtInvocation<?>>() {
             @Override
             public void process(CtInvocation<?> methodCall) {
-                executeIfMethodMatches(methodCall, originalFullyQualifiedName, () -> methodCall.getExecutable().setSimpleName(newName));
+                executeIfMethodMatches(methodCall, originalSignature, () -> methodCall.getExecutable().setSimpleName(newName));
             }
         });
     }
 
     @Override
-    public <T> void addArgument(String methodFullyQualifiedName, int position, T value) {
+    public <T> void addArgument(String methodSignature, int position, T value) {
         processors.add(new AbstractProcessor<CtInvocation<?>>() {
             @Override
             public void process(CtInvocation<?> methodCall) {
-                executeIfMethodMatches(methodCall, methodFullyQualifiedName, () -> methodCall.addArgumentAt(position, getFactory().Code().createLiteral(value)));
+                executeIfMethodMatches(methodCall, methodSignature, () -> methodCall.addArgumentAt(position, getFactory().Code().createLiteral(value)));
             }
         });
     }
 
 
     @Override
-    public void removeArgument(String methodFullyQualifiedName, int position) {
+    public void removeArgument(String methodSignature, int position) {
         processors.add(new AbstractProcessor<CtInvocation<?>>() {
                     @Override
                     public void process(CtInvocation<?> methodCall) {
-                        executeIfMethodMatches(methodCall, methodFullyQualifiedName, () -> methodCall.removeArgument(methodCall.getArguments().get(position)));
+                        executeIfMethodMatches(methodCall, methodSignature, () -> methodCall.removeArgument(methodCall.getArguments().get(position)));
                     }
                 }
         );
     }
 
     @Override
-    public void swapArguments(String methodFullyQualifiedName, int positionArgument, int positionArgument2) {
+    public void swapArguments(String methodSignature, int positionArgument, int positionArgument2) {
         processors.add(new AbstractProcessor<CtInvocation<?>>() {
                     @Override
                     public void process(CtInvocation<?> methodCall) {
-                        executeIfMethodMatches(methodCall, methodFullyQualifiedName, () -> Collections.swap(methodCall.getArguments(), positionArgument, positionArgument2));
+                        executeIfMethodMatches(methodCall, methodSignature, () -> Collections.swap(methodCall.getArguments(), positionArgument, positionArgument2));
                     }
                 }
         );
@@ -70,7 +70,7 @@ public class SpoonMethodCallTransformer implements MethodCallTransformer {
 
 
     @Override
-    public void changeReference(String originalFullyQualifiedName, String newPath) {
+    public void changeReference(String methodSignature, String newPath) {
 //        execute(new AbstractProcessor<CtInvocation<?>>() {
 //            @Override
 //            public void process(CtInvocation<?> methodCall) {
@@ -89,28 +89,24 @@ public class SpoonMethodCallTransformer implements MethodCallTransformer {
         // TODO
     }
 
-    private static void executeIfMethodMatches(CtInvocation<?> methodCall, String originalFullyQualifiedName, Runnable action) {
-        String path = getFullyQualifiedName(methodCall);
+    private static void executeIfMethodMatches(CtInvocation<?> methodCall, String originalSignature, Runnable action) {
+        String path = getSignature(methodCall);
 
-        if (path.equals(originalFullyQualifiedName)) {
+        if (path.equals(originalSignature)) {
             action.run();
         }
     }
 
-    private static String getFullyQualifiedName(CtInvocation<?> methodCall) {
+    private static String getSignature(CtInvocation<?> methodCall) {
         return getClass(methodCall) + "." + methodCall.getExecutable().getSimpleName() + "(" + String.join(", ", getArgumentTypes(methodCall)) + ")";
     }
 
     private static List<String> getArgumentTypes(CtInvocation<?> methodCall) {
-        return methodCall.getArguments().stream().filter(argument -> argument.getType() != null).map(argument -> argument.getType().getQualifiedName()).toList();
+        return methodCall.getArguments().stream().filter(argument -> argument.getType() != null).map(argument -> argument.getType().getSimpleName()).toList();
     }
 
     private static CtTypeReference<?> getClass(CtInvocation<?> methodCall) {
         return methodCall.getExecutable().getDeclaringType();
-    }
-
-    private void execute() {
-
     }
 
     private Launcher getLauncher() {

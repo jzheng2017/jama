@@ -18,13 +18,12 @@ public class Jama {
         GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/plugin-test-repo-2"));
         GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-text"));
         Migrator migrator = new Migrator(new File("/home/jiankai/test"));
-        migrator.migrate(migratedProject, dependencyProject, "cb85bed", "82aecf3");
+        migrator.migrate(migratedProject, dependencyProject, "cb85bed", "78e2eae4");
+//        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/plugin-test-repo-2"));
+//        Migrator migrator = new Migrator(new File("/home/jiankai/test"));
+//        migrator.migrate(migratedProject, dependencyProject, "7fdfc95d", "2714762");
 
 //        Project project = new CompositeProjectFactory().createProject(new File("/home/jiankai/IdeaProjects/plugin-test-repo-2"));
-//
-//        MethodQuery methodQuery = new SpoonMethodQuery(project);
-//
-//        Optional<Method> method = methodQuery.getMethod(new File("/home/jiankai/IdeaProjects/plugin-test-repo-2/src/main/java/org/example/HelloImpl.java"), new Position(6,0,9,11));
 //
 //        System.out.println(method.get());
     }

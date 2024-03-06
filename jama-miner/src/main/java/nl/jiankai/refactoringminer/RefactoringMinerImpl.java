@@ -1,5 +1,7 @@
 package nl.jiankai.refactoringminer;
 
+import gr.uom.java.xmi.UMLParameter;
+import gr.uom.java.xmi.UMLType;
 import gr.uom.java.xmi.diff.*;
 import nl.jiankai.api.*;
 import org.eclipse.jgit.lib.Repository;
@@ -14,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class RefactoringMinerImpl implements RefactoringMiner {
     private final MethodQuery methodQuery;
@@ -57,13 +60,57 @@ public class RefactoringMinerImpl implements RefactoringMiner {
     private Refactoring.CodeElement getBeforeElement(org.refactoringminer.api.Refactoring refactoring) {
         String filePath = getBeforeFilePath(refactoring);
         Position position = getBeforePosition(refactoring);
-        return new Refactoring.CodeElement(getBeforeElementName(refactoring), getBeforePackagePath(refactoring), null, position, filePath);
+        return new Refactoring.CodeElement(getBeforeElementName(refactoring), getBeforePackagePath(refactoring), getBeforeSignature(refactoring), position, filePath);
     }
 
     private Refactoring.CodeElement getAfterElement(org.refactoringminer.api.Refactoring refactoring) {
         String filePath = getAfterFilePath(refactoring);
         Position position = getAfterPosition(refactoring);
-        return new Refactoring.CodeElement(getAfterElementName(refactoring), getAfterPackagePath(refactoring), null, position, filePath);
+        return new Refactoring.CodeElement(getAfterElementName(refactoring), getAfterPackagePath(refactoring), getAfterSignature(refactoring), position, filePath);
+    }
+
+    private String getBeforeSignature(org.refactoringminer.api.Refactoring refactoring) {
+        String parameters = getBeforeParameters(refactoring);
+        return getFullyQualifiedClassName(refactoring) + "." + getBeforeElementName(refactoring) + (parameters.isEmpty() ? "" : parameters);
+    }
+
+    private String getBeforeParameters(org.refactoringminer.api.Refactoring refactoring) {
+        String parameters = "(";
+        if (refactoring instanceof ChangeReturnTypeRefactoring crtr) {
+            parameters += crtr.getOperationBefore().getParameters().stream().filter(m -> "in".equals(m.getKind())).map(UMLParameter::getType).map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+        } else if (refactoring instanceof AddParameterRefactoring apr) {
+            parameters += apr.getOperationBefore().getParameters().stream().filter(m -> "in".equals(m.getKind())).map(UMLParameter::getType).map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+        } else if (refactoring instanceof RemoveParameterRefactoring rpr) {
+            parameters += rpr.getOperationBefore().getParameters().stream().filter(m -> "in".equals(m.getKind())).map(UMLParameter::getType).map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+        } else if (refactoring instanceof ChangeVariableTypeRefactoring cvtr) {
+            parameters += cvtr.getOperationBefore().getParameterTypeList().stream().map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+        } else if (refactoring instanceof RenameOperationRefactoring ror) {
+            parameters += ror.getOriginalOperation().getParameters().stream().filter(m -> "in".equals(m.getKind())).map(UMLParameter::getType).map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+        }
+
+        return parameters + ")";
+    }
+
+    private String getAfterSignature(org.refactoringminer.api.Refactoring refactoring) {
+        String parameters = getAfterParameters(refactoring);
+        return getFullyQualifiedClassName(refactoring) + "." + getAfterElementName(refactoring) + (parameters.isEmpty() ? "" : parameters);
+    }
+
+    private String getAfterParameters(org.refactoringminer.api.Refactoring refactoring) {
+        String parameters = "(";
+        if (refactoring instanceof ChangeReturnTypeRefactoring crtr) {
+            parameters += crtr.getOperationAfter().getParameters().stream().filter(m -> "in".equals(m.getKind())).map(UMLParameter::getType).map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+        } else if (refactoring instanceof AddParameterRefactoring apr) {
+            parameters += apr.getOperationAfter().getParameters().stream().filter(m -> "in".equals(m.getKind())).map(UMLParameter::getType).map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+        } else if (refactoring instanceof RemoveParameterRefactoring rpr) {
+            parameters += rpr.getOperationAfter().getParameters().stream().filter(m -> "in".equals(m.getKind())).map(UMLParameter::getType).map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+        } else if (refactoring instanceof ChangeVariableTypeRefactoring cvtr) {
+            parameters += cvtr.getOperationAfter().getParameterTypeList().stream().map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+        } else if (refactoring instanceof RenameOperationRefactoring ror) {
+            parameters += ror.getRenamedOperation().getParameters().stream().filter(m -> "in".equals(m.getKind())).map(UMLParameter::getType).map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+        }
+
+        return parameters + ")";
     }
 
     private String getFullyQualifiedClassName(org.refactoringminer.api.Refactoring refactoring) {

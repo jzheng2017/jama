@@ -36,8 +36,10 @@ public class Migrator {
     }
 
     private void migrate(GitRepository migratedProject, Migration migration, MethodCallTransformer methodCallTransformer) {
-        var rename = new RenameMethodCallOperator(methodCallTransformer);
-        rename.migrate(migration);
+        if (migration.mapping().refactoringType() == RefactoringType.METHOD_NAME) {
+            var rename = new RenameMethodCallOperator(methodCallTransformer);
+            rename.migrate(migration);
+        }
     }
 
     private MigrationOperator operation(Migration migration) {

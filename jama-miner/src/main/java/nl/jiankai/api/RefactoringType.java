@@ -11,6 +11,7 @@ public enum RefactoringType {
     ENCAPSULATE_ATTRIBUTE,
     CLASS_NAME,
     MOVE_CLASS,
+    REMOVE_CLASS,
     PACKAGE_NAME,
     MOVE_RENAME_CLASS,
     UNKNOWN;

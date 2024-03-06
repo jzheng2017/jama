@@ -18,6 +18,6 @@ public class RenameMethodCallOperator implements MigrationOperator {
         ApiMapping start = migration.mapping();
         ApiMapping end = migration.end();
 
-        methodCallTransformer.rename(start.original().fullPath(), end.target().fullPath());
+        methodCallTransformer.rename(start.original().signature(), end.target().name());
     }
 }
