@@ -51,8 +51,18 @@ public class RefactoringMinerImpl implements RefactoringMiner {
                 private Map<String, Object> getContext(org.refactoringminer.api.Refactoring r) {
                     if (r instanceof ReorderParameterRefactoring ropr) {
                         return Map.of(
-                                "before", ropr.getParametersBefore().stream().map(VariableDeclaration::getVariableName).toList(),
-                                "after", ropr.getParametersAfter().stream().map(VariableDeclaration::getVariableName).toList()
+                                "before", ropr.getParametersBefore().stream().map(v -> new Variable(v.getType().toString(), v.getVariableName())).toList(),
+                                "after", ropr.getParametersAfter().stream().map(v -> new Variable(v.getType().toString(), v.getVariableName())).toList()
+                        );
+                    } else if (r instanceof AddParameterRefactoring apr) {
+                        return Map.of(
+                                "before", apr.getOperationBefore().getParameterDeclarationList().stream().map(v -> new Variable(v.getType().toString(), v.getVariableName())).toList(),
+                                "after", apr.getOperationAfter().getParameterDeclarationList().stream().map(v -> new Variable(v.getType().toString(), v.getVariableName())).toList()
+                        );
+                    } else if (r instanceof RemoveParameterRefactoring rpr) {
+                        return Map.of(
+                                "before", rpr.getOperationBefore().getParameterDeclarationList().stream().map(v -> new Variable(v.getType().toString(), v.getVariableName())).toList(),
+                                "after", rpr.getOperationAfter().getParameterDeclarationList().stream().map(v -> new Variable(v.getType().toString(), v.getVariableName())).toList()
                         );
                     }
                     return new HashMap<>();

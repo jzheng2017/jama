@@ -46,7 +46,16 @@ public class SpoonMethodCallTransformer implements MethodCallTransformer {
         processors.add(new AbstractProcessor<CtInvocation<?>>() {
             @Override
             public void process(CtInvocation<?> methodCall) {
-                executeIfMethodMatches(methodCall, methodSignature, () -> methodCall.addArgumentAt(position, getFactory().Code().createLiteral(value)));
+                executeIfMethodMatches(methodCall, methodSignature, () -> {
+                    boolean addToEndOfList = position == -1;
+
+                    if (addToEndOfList) {
+                        methodCall.addArgument(getFactory().Code().createLiteral(value));
+
+                    } else {
+                        methodCall.addArgumentAt(position, getFactory().Code().createLiteral(value));
+                    }
+                });
             }
         });
     }
@@ -112,7 +121,7 @@ public class SpoonMethodCallTransformer implements MethodCallTransformer {
     }
 
     private static List<String> getArgumentTypes(CtInvocation<?> methodCall) {
-        return methodCall.getArguments().stream().filter(argument -> argument.getType() != null).map(argument -> argument.getType().getSimpleName()).toList();
+        return methodCall.getExecutable().getParameters().stream().map(CtTypeReference::getSimpleName).toList();
     }
 
     private static CtTypeReference<?> getClass(CtInvocation<?> methodCall) {

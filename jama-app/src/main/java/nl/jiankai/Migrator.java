@@ -4,7 +4,7 @@ import nl.jiankai.api.*;
 import nl.jiankai.migration.MigrationPathEvaluatorImpl;
 import nl.jiankai.operators.MigrationOperator;
 import nl.jiankai.operators.RenameMethodCallOperator;
-import nl.jiankai.operators.ReorderArgumentMethodCallOperator;
+import nl.jiankai.operators.MethodCallArgumentOperator;
 import nl.jiankai.refactoringminer.RefactoringMinerImpl;
 import nl.jiankai.spoon.SpoonMethodCallTransformer;
 import nl.jiankai.spoon.SpoonMethodQuery;
@@ -44,7 +44,7 @@ public class Migrator {
             var rename = new RenameMethodCallOperator(methodCallTransformer);
             rename.migrate(migration);
         } else if (migration.mapping().refactoringType() == RefactoringType.REORDER_PARAMETER) {
-            var reorder = new ReorderArgumentMethodCallOperator(methodCallTransformer);
+            var reorder = new MethodCallArgumentOperator(methodCallTransformer);
             reorder.migrate(migration);
         }
     }

@@ -11,13 +11,17 @@ public interface MethodCallTransformer extends Transformer {
     /**
      * Add an argument to the method call matching the fully qualified method name. If no default value is provided it will use the default value of the primitive type or null in case of an object.
      * @param methodSignature signature of the method call to be refactored
-     * @param position position of the argument
+     * @param position position of the argument - provide -1 if you want to add at the end of the argument list
      * @param value a value to insert in the method call for the added argument
      */
     <T> void addArgument(String methodSignature, int position, T value);
 
     default void addArgument(String methodSignature, int position) {
         addArgument(methodSignature, position, null);
+    }
+
+    default void addArgument(String methodSignature) {
+        addArgument(methodSignature, -1);
     }
 
     /**
