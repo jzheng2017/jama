@@ -8,7 +8,7 @@ import nl.jiankai.api.Refactoring;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class MigrationPathEvaluatorImpl implements MigrationPathEvaluator {
+public class MethodMigrationPathEvaluatorImpl implements MigrationPathEvaluator {
     @Override
     public Collection<Migration> evaluate(Collection<Refactoring> refactorings) {
         Map<Integer, List<Refactoring>> methods = refactorings.

@@ -8,6 +8,7 @@ public enum RefactoringType {
     CHANGE_RETURN_TYPE,
     ADD_PARAMETER,
     REMOVE_PARAMETER,
+    RENAME_PARAMETER,
     ENCAPSULATE_ATTRIBUTE,
     CLASS_NAME,
     MOVE_CLASS,
@@ -25,7 +26,20 @@ public enum RefactoringType {
                                 CHANGE_RETURN_TYPE,
                                 ADD_PARAMETER,
                                 REMOVE_PARAMETER,
-                                REORDER_PARAMETER
+                                REORDER_PARAMETER,
+                                RENAME_PARAMETER
+                        )
+                .contains(this);
+    }
+
+    public boolean isMethodParameterRefactoring() {
+        return Set.of
+                        (
+                                CHANGE_PARAMETER_TYPE,
+                                ADD_PARAMETER,
+                                REMOVE_PARAMETER,
+                                REORDER_PARAMETER,
+                                RENAME_PARAMETER
                         )
                 .contains(this);
     }

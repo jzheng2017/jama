@@ -1,8 +1,7 @@
 package nl.jiankai;
 
 import nl.jiankai.api.*;
-import nl.jiankai.migration.MigrationPathEvaluatorImpl;
-import nl.jiankai.operators.MigrationOperator;
+import nl.jiankai.migration.MethodMigrationPathEvaluatorImpl;
 import nl.jiankai.operators.RenameMethodCallOperator;
 import nl.jiankai.operators.MethodCallArgumentOperator;
 import nl.jiankai.refactoringminer.RefactoringMinerImpl;
@@ -15,6 +14,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 public class Migrator {
     private static final Logger LOGGER = LoggerFactory.getLogger(Migrator.class);
@@ -28,28 +28,27 @@ public class Migrator {
     public void migrate(GitRepository migratedProject, GitRepository dependencyProject, String startCommitId, String endCommitId) {
         MethodCallTransformer methodCallTransformer = new SpoonMethodCallTransformer(migratedProject, outputDirectory);
         transformers.add(methodCallTransformer);
-        RefactoringMiner refactoringMiner = new RefactoringMinerImpl(new SpoonMethodQuery(dependencyProject));
+        RefactoringMiner refactoringMiner = new RefactoringMinerImpl();
         Collection<Refactoring> refactorings = refactoringMiner.detectRefactoringBetweenCommit(dependencyProject, startCommitId, endCommitId);
         LOGGER.info("Found {} refactorings", refactorings.size());
-        MigrationPathEvaluator migrationPathEvaluator = new MigrationPathEvaluatorImpl();
+        MigrationPathEvaluator migrationPathEvaluator = new MethodMigrationPathEvaluatorImpl();
         migrationPathEvaluator
                 .evaluate(refactorings)
-                .forEach(migration -> migrate(migratedProject, migration, methodCallTransformer));
+                .forEach(migration -> migrate(migration, methodCallTransformer));
 
         transformers.forEach(Transformer::run);
     }
 
-    private void migrate(GitRepository migratedProject, Migration migration, MethodCallTransformer methodCallTransformer) {
-        if (migration.mapping().refactoringType() == RefactoringType.METHOD_NAME) {
+    private void migrate(Migration migration, MethodCallTransformer methodCallTransformer) {
+        Set<RefactoringType> refactoringTypes = migration.refactorings();
+        if (refactoringTypes.contains(RefactoringType.METHOD_NAME)) {
             var rename = new RenameMethodCallOperator(methodCallTransformer);
             rename.migrate(migration);
-        } else if (migration.mapping().refactoringType() == RefactoringType.REORDER_PARAMETER) {
-            var reorder = new MethodCallArgumentOperator(methodCallTransformer);
-            reorder.migrate(migration);
         }
-    }
 
-    private MigrationOperator operation(Migration migration) {
-        return null;
+        if (refactoringTypes.stream().anyMatch(RefactoringType::isMethodParameterRefactoring)) {
+            var argumentsOperator = new MethodCallArgumentOperator(methodCallTransformer);
+            argumentsOperator.migrate(migration);
+        }
     }
 }

@@ -6,6 +6,8 @@ import nl.jiankai.api.Variable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.*;
 
 public class MethodCallArgumentOperator implements MigrationOperator {
@@ -30,20 +32,37 @@ public class MethodCallArgumentOperator implements MigrationOperator {
 
         String currentSignature = migration.mapping().original().signature();
 
-        addArguments(newSet, oldSet, after, currentSignature, current);
+        addArguments(newSet, oldSet, afterParameters, currentSignature, current);
         removeArguments(oldSet, newSet, current, currentSignature);
         swapArguments(oldSet, newSet, current, after, currentSignature);
     }
 
-    private void addArguments(Set<String> newSet, Set<String> oldSet, List<String> after, String currentSignature, List<String> current) {
+    private void addArguments(Set<String> newSet, Set<String> oldSet, List<Variable> afterParameters, String currentSignature, List<String> current) {
         Set<String> added = new HashSet<>(newSet);
         added.removeAll(oldSet);
+        List<String> after = afterParameters.stream().map(Variable::name).toList();
+
 
         for (String param : added) {
             int index = after.indexOf(param);
-            methodCallTransformer.addArgument(currentSignature, index);
+            methodCallTransformer.addArgument(currentSignature, index, getDefaultValue(afterParameters.get(index).type()));
             current.add(index, param);
         }
+    }
+
+    private <T> T getDefaultValue(String type) {
+        return (T) switch (type) {
+            case "int", "Integer", "short", "Short", "byte", "Byte" -> 0;
+            case "long", "Long" -> 0L;
+            case "char" -> '\u0000';
+            case "String" -> "";
+            case "float", "Float" -> 0.0f;
+            case "double", "Double" -> 0.0d;
+            case "BigDecimal" -> BigDecimal.ZERO;
+            case "BigInteger" -> BigInteger.ZERO;
+            case "boolean", "Boolean" -> false;
+            default -> null;
+        };
     }
 
     private void removeArguments(Set<String> oldSet, Set<String> newSet, List<String> current, String currentSignature) {
@@ -53,6 +72,7 @@ public class MethodCallArgumentOperator implements MigrationOperator {
         for (String param : removed) {
             int index = current.indexOf(param);
             methodCallTransformer.removeArgument(currentSignature, index);
+            current.remove(index);
         }
     }
 
