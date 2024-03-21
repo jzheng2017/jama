@@ -6,7 +6,6 @@ import nl.jiankai.operators.RenameMethodCallOperator;
 import nl.jiankai.operators.MethodCallArgumentOperator;
 import nl.jiankai.refactoringminer.RefactoringMinerImpl;
 import nl.jiankai.spoon.SpoonMethodCallTransformer;
-import nl.jiankai.spoon.SpoonMethodQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

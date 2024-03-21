@@ -39,6 +39,8 @@ public interface MethodCallTransformer extends Transformer {
      */
     void swapArguments(String methodSignature, int positionArgument, int positionArgument2);
 
+    <T> void replaceArgument(String methodSignature, int position, T value);
+
     /**
      * Change the reference of the method calls matching the provided signature (e.g. org.example.Class#function to org.exampleV2.Class#function)
      * @param methodSignature the signature of the original method that is being called

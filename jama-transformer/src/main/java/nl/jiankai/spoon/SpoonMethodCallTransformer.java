@@ -87,6 +87,19 @@ public class SpoonMethodCallTransformer implements MethodCallTransformer {
         );
     }
 
+    @Override
+    public <T> void replaceArgument(String methodSignature, int position, T value) {
+        LOGGER.info("Replacing an argument from the method '{}' at position {} with {}", methodSignature, position, value);
+
+        processors.add(new AbstractProcessor<CtInvocation<?>>() {
+                           @Override
+                           public void process(CtInvocation<?> methodCall) {
+                               executeIfMethodMatches(methodCall, methodSignature, () -> methodCall.getArguments().get(position).replace(getFactory().Code().createLiteral(value)));
+                           }
+                       }
+        );
+    }
+
 
     @Override
     public void changeReference(String methodSignature, String newPath) {

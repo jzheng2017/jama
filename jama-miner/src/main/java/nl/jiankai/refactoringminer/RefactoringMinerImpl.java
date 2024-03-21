@@ -64,7 +64,15 @@ public class RefactoringMinerImpl implements RefactoringMiner {
                     } else if (r instanceof RenameVariableRefactoring rvr) {
                         return Map.of(
                                 "before", rvr.getOperationBefore().getParameterDeclarationList().stream().map(v -> new Variable(v.getType().toString(), v.getVariableName())).toList(),
-                                "after", rvr.getOperationAfter().getParameterDeclarationList().stream().map(v -> new Variable(v.getType().toString(), v.getVariableName())).toList()
+                                "after", rvr.getOperationAfter().getParameterDeclarationList().stream().map(v -> new Variable(v.getType().toString(), v.getVariableName())).toList(),
+                                "original", rvr.getOriginalVariable().getVariableName(),
+                                "renamed", rvr.getRenamedVariable().getVariableName()
+                        );
+                    } else if (r instanceof ChangeVariableTypeRefactoring cvtr) {
+                        return Map.of(
+                                "before", cvtr.getOperationBefore().getParameterDeclarationList().stream().map(v -> new Variable(v.getType().toString(), v.getVariableName())).toList(),
+                                "after", cvtr.getOperationAfter().getParameterDeclarationList().stream().map(v -> new Variable(v.getType().toString(), v.getVariableName())).toList(),
+                                "changedTypeVariable", cvtr.getChangedTypeVariable().getVariableName()
                         );
                     }
                     return new HashMap<>();
