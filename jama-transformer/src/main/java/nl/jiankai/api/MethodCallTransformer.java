@@ -1,12 +1,12 @@
 package nl.jiankai.api;
 
-public interface MethodCallTransformer extends Transformer {
+public interface MethodCallTransformer<P> {
     /**
      * Renames the method name of all method calls matching the provided signature to a new name
      * @param originalSignature the signature of the original method that is being called
      * @param newName the name method name to refactor to
      */
-    void rename(String originalSignature, String newName);
+    P rename(String originalSignature, String newName);
 
     /**
      * Add an argument to the method call matching the fully qualified method name. If no default value is provided it will use the default value of the primitive type or null in case of an object.
@@ -14,14 +14,14 @@ public interface MethodCallTransformer extends Transformer {
      * @param position position of the argument - provide -1 if you want to add at the end of the argument list
      * @param value a value to insert in the method call for the added argument
      */
-    <T> void addArgument(String methodSignature, int position, T value);
+    <T> P addArgument(String methodSignature, int position, T value);
 
-    default void addArgument(String methodSignature, int position) {
-        addArgument(methodSignature, position, null);
+    default P addArgument(String methodSignature, int position) {
+        return addArgument(methodSignature, position, null);
     }
 
-    default void addArgument(String methodSignature) {
-        addArgument(methodSignature, -1);
+    default P addArgument(String methodSignature) {
+        return addArgument(methodSignature, -1);
     }
 
     /**
@@ -29,7 +29,7 @@ public interface MethodCallTransformer extends Transformer {
      * @param methodSignature signature of the method call
      * @param position position of the argument in the method call
      */
-    void removeArgument(String methodSignature, int position);
+    P removeArgument(String methodSignature, int position);
 
     /**
      * Swap the positions of two arguments
@@ -37,14 +37,14 @@ public interface MethodCallTransformer extends Transformer {
      * @param positionArgument position of the first argument
      * @param positionArgument2 position of the second argument
      */
-    void swapArguments(String methodSignature, int positionArgument, int positionArgument2);
+    P swapArguments(String methodSignature, int positionArgument, int positionArgument2);
 
-    <T> void replaceArgument(String methodSignature, int position, T value);
+    <T> P replaceArgument(String methodSignature, int position, T value);
 
     /**
      * Change the reference of the method calls matching the provided signature (e.g. org.example.Class#function to org.exampleV2.Class#function)
      * @param methodSignature the signature of the original method that is being called
      * @param newPath the path to the new function (e.g. org.exampleV2.Class)
      */
-    void changeReference(String methodSignature, String newPath);
+    P changeReference(String methodSignature, String newPath);
 }

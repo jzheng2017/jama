@@ -37,5 +37,11 @@ public interface Project extends Identifiable {
      */
     boolean hasDependency(Dependency dependency);
 
+    /**
+     * Upgrade a dependency
+     * @param dependency the dependency
+     */
+    void upgradeDependency(Dependency dependency);
+
     ProjectType getProjectType();
 }

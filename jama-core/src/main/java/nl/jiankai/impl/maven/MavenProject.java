@@ -5,6 +5,7 @@ import nl.jiankai.api.Dependency;
 import nl.jiankai.api.Project;
 import nl.jiankai.api.ProjectData;
 import nl.jiankai.api.ProjectType;
+import nl.jiankai.util.FileUtil;
 
 import java.io.File;
 import java.util.Collection;
@@ -13,9 +14,10 @@ import java.util.Objects;
 public class MavenProject implements Project {
     private final File projectRootPath;
     private final MavenProjectDependencyResolver dependencyResolver = new MavenProjectDependencyResolver();
-
+    private final MavenDependencyManager dependencyManager;
     public MavenProject(File projectRootPath) {
         this.projectRootPath = projectRootPath;
+        this.dependencyManager = new MavenDependencyManager(FileUtil.findPomFile(projectRootPath));
     }
 
     @Override
@@ -46,6 +48,11 @@ public class MavenProject implements Project {
     @Override
     public boolean hasDependency(Dependency dependency) {
         return resolve().contains(dependency);
+    }
+
+    @Override
+    public void upgradeDependency(Dependency dependency) {
+        dependencyManager.changeDependency(dependency);
     }
 
     @Override

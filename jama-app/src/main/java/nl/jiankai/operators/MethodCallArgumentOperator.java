@@ -1,9 +1,6 @@
 package nl.jiankai.operators;
 
-import nl.jiankai.api.MethodCallTransformer;
-import nl.jiankai.api.Migration;
-import nl.jiankai.api.RefactoringType;
-import nl.jiankai.api.Variable;
+import nl.jiankai.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,12 +9,14 @@ import java.math.BigInteger;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class MethodCallArgumentOperator implements MigrationOperator {
+public class MethodCallArgumentOperator<P> implements MigrationOperator {
     private static final Logger LOGGER = LoggerFactory.getLogger(MethodCallArgumentOperator.class);
-    private final MethodCallTransformer methodCallTransformer;
+    private final MethodCallTransformer<P> methodCallTransformer;
+    private final Transformer<P> transformer;
 
-    public MethodCallArgumentOperator(MethodCallTransformer methodCallTransformer) {
+    public MethodCallArgumentOperator(MethodCallTransformer<P> methodCallTransformer, Transformer<P> transformer) {
         this.methodCallTransformer = methodCallTransformer;
+        this.transformer = transformer;
     }
 
     @Override
@@ -38,7 +37,7 @@ public class MethodCallArgumentOperator implements MigrationOperator {
         removeArguments(oldSet, newSet, current, currentSignature);
         swapArguments(oldSet, newSet, current, after, currentSignature);
 
-        Map<String, String> changedVariables = getChangedVariables(migration);
+        Map<String, String> changedVariables = getChangedTypeVariables(migration);
         updateArgumentTypes(afterParameters, changedVariables, currentSignature);
     }
 
@@ -48,7 +47,7 @@ public class MethodCallArgumentOperator implements MigrationOperator {
         for (Map.Entry<String, String> variable : changedVariables.entrySet()) {
             int index = afterNames.indexOf(variable.getValue());
             if (index >= 0) {
-                methodCallTransformer.replaceArgument(currentSignature, index, getDefaultValue(after.get(index).type()));
+                transformer.addProcessor(methodCallTransformer.replaceArgument(currentSignature, index, getDefaultValue(after.get(index).type())));
             }
         }
     }
@@ -71,7 +70,7 @@ public class MethodCallArgumentOperator implements MigrationOperator {
 
         for (String param : added) {
             int index = after.indexOf(param);
-            methodCallTransformer.addArgument(currentSignature, index, getDefaultValue(afterParameters.get(index).type()));
+            transformer.addProcessor(methodCallTransformer.addArgument(currentSignature, index, getDefaultValue(afterParameters.get(index).type())));
             current.add(index, param);
         }
     }
@@ -97,7 +96,7 @@ public class MethodCallArgumentOperator implements MigrationOperator {
 
         for (String param : removed) {
             int index = current.indexOf(param);
-            methodCallTransformer.removeArgument(currentSignature, index);
+            transformer.addProcessor(methodCallTransformer.removeArgument(currentSignature, index));
             current.remove(index);
         }
     }
@@ -117,7 +116,7 @@ public class MethodCallArgumentOperator implements MigrationOperator {
             int newIndex = after.indexOf(param);
             if (oldIndex != newIndex) {
                 Collections.swap(current, oldIndex, newIndex);
-                methodCallTransformer.swapArguments(currentSignature, oldIndex, newIndex);
+                transformer.addProcessor(methodCallTransformer.swapArguments(currentSignature, oldIndex, newIndex));
             }
         }
     }
@@ -135,7 +134,7 @@ public class MethodCallArgumentOperator implements MigrationOperator {
         return parameters;
     }
 
-    private Map<String, String> getChangedVariables(Migration migration) {
+    private Map<String, String> getChangedTypeVariables(Migration migration) {
         Migration current = migration;
         Set<String> variables = new HashSet<>();
         Map<String, String> names = getMostRecentNames(migration);

@@ -3,14 +3,17 @@ package nl.jiankai.operators;
 import nl.jiankai.api.ApiMapping;
 import nl.jiankai.api.MethodCallTransformer;
 import nl.jiankai.api.Migration;
+import nl.jiankai.api.Transformer;
 
 import java.util.Map;
 
-public class RenameMethodCallOperator implements MigrationOperator {
-    private MethodCallTransformer methodCallTransformer;
+public class RenameMethodCallOperator<P> implements MigrationOperator {
+    private final MethodCallTransformer<P> methodCallTransformer;
+    private final Transformer<P> transformer;
 
-    public RenameMethodCallOperator(MethodCallTransformer methodCallTransformer) {
+    public RenameMethodCallOperator(MethodCallTransformer<P> methodCallTransformer, Transformer<P> transformer) {
         this.methodCallTransformer = methodCallTransformer;
+        this.transformer = transformer;
     }
 
     @Override
@@ -18,6 +21,6 @@ public class RenameMethodCallOperator implements MigrationOperator {
         ApiMapping start = migration.mapping();
         ApiMapping end = migration.end();
 
-        methodCallTransformer.rename(start.original().signature(), end.target().name());
+         transformer.addProcessor(methodCallTransformer.rename(start.original().signature(), end.target().name()));
     }
 }
