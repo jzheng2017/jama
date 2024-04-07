@@ -26,7 +26,8 @@ public class SpoonTransformer implements Transformer<Processor<?>> {
 
     private Launcher getLauncher() {
         return switch (project.getProjectType()) {
-            case ProjectType.MAVEN -> new MavenLauncher(project.getLocalPath().getAbsolutePath(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE);
+            case ProjectType.MAVEN ->
+                    new MavenLauncher(project.getLocalPath().getAbsolutePath(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE);
             case UNKNOWN -> throw new UnsupportedOperationException("Unsupported project type");
         };
     }
@@ -37,15 +38,22 @@ public class SpoonTransformer implements Transformer<Processor<?>> {
     }
 
     @Override
+    public void reset() {
+        processors.clear();
+    }
+
+    @Override
     public void run() {
         Launcher launcher = getLauncher();
         processors.forEach(launcher::addProcessor);
         launcher.setSourceOutputDirectory(new File(targetDirectory, Paths.get("src", "main", "java").toString()));
-        launcher.getEnvironment().setPrettyPrinterCreator(() -> {
-            DefaultJavaPrettyPrinter printer = new DefaultJavaPrettyPrinter(launcher.getEnvironment());
-            printer.setIgnoreImplicit(false);
-            return printer;
-        });
+        launcher.getEnvironment()
+                .setPrettyPrinterCreator(() -> {
+                    DefaultJavaPrettyPrinter printer = new DefaultJavaPrettyPrinter(launcher.getEnvironment());
+                    printer.setIgnoreImplicit(false);
+                    return printer;
+                });
+        launcher.getEnvironment().setNoClasspath(true); //which allows us to suppress compilation errors (no exception thrown)
         launcher.run();
     }
 }

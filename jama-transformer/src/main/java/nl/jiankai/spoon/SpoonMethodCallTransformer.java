@@ -6,10 +6,10 @@ import org.slf4j.LoggerFactory;
 import spoon.processing.AbstractProcessor;
 import spoon.processing.Processor;
 import spoon.reflect.code.CtInvocation;
-import spoon.reflect.reference.CtTypeReference;
 
 import java.util.Collections;
-import java.util.List;
+
+import static nl.jiankai.spoon.SpoonUtil.getSignature;
 
 public class SpoonMethodCallTransformer implements MethodCallTransformer<Processor<?>> {
     private static final Logger LOGGER = LoggerFactory.getLogger(SpoonMethodCallTransformer.class);
@@ -112,17 +112,5 @@ public class SpoonMethodCallTransformer implements MethodCallTransformer<Process
         if (path.equals(originalSignature)) {
             action.run();
         }
-    }
-
-    private static String getSignature(CtInvocation<?> methodCall) {
-        return getClass(methodCall) + "." + methodCall.getExecutable().getSimpleName() + "(" + String.join(", ", getArgumentTypes(methodCall)) + ")";
-    }
-
-    private static List<String> getArgumentTypes(CtInvocation<?> methodCall) {
-        return methodCall.getExecutable().getParameters().stream().map(CtTypeReference::getSimpleName).toList();
-    }
-
-    private static CtTypeReference<?> getClass(CtInvocation<?> methodCall) {
-        return methodCall.getExecutable().getDeclaringType();
     }
 }

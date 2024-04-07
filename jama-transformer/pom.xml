@@ -10,7 +10,7 @@
     <artifactId>jama-transformer</artifactId>
     <packaging>jar</packaging>
 
-    <name>jama-refactoring</name>
+    <name>jama-transformer</name>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

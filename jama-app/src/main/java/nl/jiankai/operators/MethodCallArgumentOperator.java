@@ -26,7 +26,8 @@ public class MethodCallArgumentOperator<P> implements MigrationOperator {
 
         List<String> before = beforeParameters.stream().map(Variable::name).toList();
         List<String> after = afterParameters.stream().map(Variable::name).toList();
-
+//        Map<String, String> recentNames = getMostRecentNames(migration);
+//        List<String> recentBefore = before.stream().map(name -> getMostRecentName(name, recentNames)).toList();
         Set<String> oldSet = new HashSet<>(before);
         Set<String> newSet = new HashSet<>(after);
         List<String> current = new ArrayList<>(before);
