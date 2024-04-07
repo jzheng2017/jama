@@ -24,13 +24,13 @@ public class MethodCallArgumentOperator<P> implements MigrationOperator {
         List<Variable> beforeParameters = getParameters(migration, "before").getFirst();
         List<Variable> afterParameters = getParameters(migration, "after").getLast();
 
-        List<String> before = beforeParameters.stream().map(Variable::name).toList();
+        Map<String, String> recentNames = getMostRecentNames(migration);
+        List<String> beforeWithUpdatedNames = beforeParameters.stream().map(Variable::name).map(name -> getMostRecentName(name, recentNames)).toList();
         List<String> after = afterParameters.stream().map(Variable::name).toList();
-//        Map<String, String> recentNames = getMostRecentNames(migration);
-//        List<String> recentBefore = before.stream().map(name -> getMostRecentName(name, recentNames)).toList();
-        Set<String> oldSet = new HashSet<>(before);
+
+        Set<String> oldSet = new HashSet<>(beforeWithUpdatedNames);
         Set<String> newSet = new HashSet<>(after);
-        List<String> current = new ArrayList<>(before);
+        List<String> current = new ArrayList<>(beforeWithUpdatedNames);
 
         String currentSignature = migration.mapping().original().signature();
 

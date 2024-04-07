@@ -27,10 +27,10 @@ public class MethodMigrationPathEvaluatorImpl implements MigrationPathEvaluator 
         List<Refactoring> starting = refactoredBySequence.get(sequence);
         List<Migration> migrations = new ArrayList<>();
 
-        for (Refactoring refactoring : starting) {
-            List<ApiMapping> mappings = new ArrayList<>();
-            ApiMapping lastMapping = toApiMapping(refactoring);
-            mappings.add(lastMapping);
+        Map<Refactoring.CodeElement, List<Refactoring>> refs = starting.stream().collect(Collectors.groupingBy(Refactoring::before));
+        for (List<Refactoring> refactorings : refs.values()) {
+            List<ApiMapping> mappings = refactorings.stream().map(this::toApiMapping).collect(Collectors.toList());
+            ApiMapping lastMapping = mappings.getLast();
             int current = sequence;
 
             while (current <= maxSeq) {
@@ -40,17 +40,23 @@ public class MethodMigrationPathEvaluatorImpl implements MigrationPathEvaluator 
                     continue;
                 }
 
-                for (Refactoring ref : nextRefactorings) {
-                    if (ref.before().equals(lastMapping.target())) {
+                ApiMapping start = lastMapping;
+
+                int index = 0;
+                while (index < nextRefactorings.size()) {
+                    Refactoring ref = nextRefactorings.get(index);
+                    if (ref.before().equals(start.target())) {
                         lastMapping = toApiMapping(ref);
                         mappings.add(lastMapping);
                         nextRefactorings.remove(ref);
-                        break;
+                    } else {
+                        index++;
                     }
                 }
 
                 current++;
             }
+
 
             migrations.add(toMigration(mappings, 0));
         }
