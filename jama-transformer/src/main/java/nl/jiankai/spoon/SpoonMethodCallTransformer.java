@@ -9,6 +9,7 @@ import spoon.reflect.code.CtInvocation;
 
 import java.util.Collections;
 
+import static nl.jiankai.spoon.SpoonUtil.executeIfMethodCallMatches;
 import static nl.jiankai.spoon.SpoonUtil.getSignature;
 
 public class SpoonMethodCallTransformer implements MethodCallTransformer<Processor<?>> {
@@ -21,7 +22,7 @@ public class SpoonMethodCallTransformer implements MethodCallTransformer<Process
         return new AbstractProcessor<CtInvocation<?>>() {
             @Override
             public void process(CtInvocation<?> methodCall) {
-                executeIfMethodMatches(methodCall, originalSignature, () -> methodCall.getExecutable().setSimpleName(newName));
+                executeIfMethodCallMatches(methodCall, originalSignature, () -> methodCall.getExecutable().setSimpleName(newName));
             }
         };
     }
@@ -33,7 +34,7 @@ public class SpoonMethodCallTransformer implements MethodCallTransformer<Process
         return new AbstractProcessor<CtInvocation<?>>() {
             @Override
             public void process(CtInvocation<?> methodCall) {
-                executeIfMethodMatches(methodCall, methodSignature, () -> {
+                executeIfMethodCallMatches(methodCall, methodSignature, () -> {
                     boolean addToEndOfList = position == -1;
 
                     if (addToEndOfList) {
@@ -55,7 +56,7 @@ public class SpoonMethodCallTransformer implements MethodCallTransformer<Process
         return new AbstractProcessor<CtInvocation<?>>() {
             @Override
             public void process(CtInvocation<?> methodCall) {
-                executeIfMethodMatches(methodCall, methodSignature, () -> methodCall.removeArgument(methodCall.getArguments().get(position)));
+                executeIfMethodCallMatches(methodCall, methodSignature, () -> methodCall.removeArgument(methodCall.getArguments().get(position)));
             }
         };
     }
@@ -67,7 +68,7 @@ public class SpoonMethodCallTransformer implements MethodCallTransformer<Process
         return new AbstractProcessor<CtInvocation<?>>() {
             @Override
             public void process(CtInvocation<?> methodCall) {
-                executeIfMethodMatches(methodCall, methodSignature, () -> Collections.swap(methodCall.getArguments(), positionArgument, positionArgument2));
+                executeIfMethodCallMatches(methodCall, methodSignature, () -> Collections.swap(methodCall.getArguments(), positionArgument, positionArgument2));
             }
         };
     }
@@ -79,7 +80,7 @@ public class SpoonMethodCallTransformer implements MethodCallTransformer<Process
         return new AbstractProcessor<CtInvocation<?>>() {
             @Override
             public void process(CtInvocation<?> methodCall) {
-                executeIfMethodMatches(methodCall, methodSignature, () -> methodCall.getArguments().get(position).replace(getFactory().Code().createLiteral(value)));
+                executeIfMethodCallMatches(methodCall, methodSignature, () -> methodCall.getArguments().get(position).replace(getFactory().Code().createLiteral(value)));
             }
         };
     }
@@ -106,11 +107,5 @@ public class SpoonMethodCallTransformer implements MethodCallTransformer<Process
         return null;
     }
 
-    private static void executeIfMethodMatches(CtInvocation<?> methodCall, String originalSignature, Runnable action) {
-        String path = getSignature(methodCall);
 
-        if (path.equals(originalSignature)) {
-            action.run();
-        }
-    }
 }

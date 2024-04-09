@@ -4,6 +4,7 @@ import nl.jiankai.Migrator;
 import nl.jiankai.api.Project;
 import nl.jiankai.api.Transformer;
 import nl.jiankai.spoon.SpoonClassTransformer;
+import nl.jiankai.spoon.SpoonStatementCleaner;
 import org.eclipse.jdt.core.compiler.CategorizedProblem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +22,7 @@ public class JDTCompilerProblemSolver {
     private static final int MAX_ITERATIONS = 2;
 
     public static final int METHOD_UNDEFINED = 67108964;
+    public static final int MUST_OVERRIDE_OR_IMPLEMENT_SUPERTYPE_METHOD = 67109498;
     public static final int MUST_IMPLEMENT_METHOD = 67109264;
     public static final int METHOD_ARGUMENTS_PROVIDED_NOT_APPLICABLE = 67108979;
 
@@ -51,16 +53,18 @@ public class JDTCompilerProblemSolver {
     }
 
     private static  <T> void solve(CategorizedProblem categorizedProblem, Transformer<T> transformer) {
-        if (categorizedProblem.getID() == MUST_IMPLEMENT_METHOD) {
-            List<String> args = Arrays.stream(categorizedProblem.getArguments()).toList();
-            transformer.addProcessor((T) new SpoonClassTransformer().implementMethod(args.getLast(), getQualifiedSignature(args)));
-        }
-    }
-
-    private static String getQualifiedSignature(List<String> args) {
+        List<String> args = Arrays.stream(categorizedProblem.getArguments()).toList();
         int size = args.size();
-
-        return "%s.%s(%s)".formatted(args.get(size - 2), args.getFirst(), unqualify(args.get(size - 3)));
+        if (categorizedProblem.getID() == MUST_IMPLEMENT_METHOD) {
+            String qualifiedSignature = "%s.%s(%s)".formatted(args.get(size - 2), args.getFirst(), unqualify(args.get(size - 3)));
+            transformer.addProcessor((T) new SpoonClassTransformer().implementMethod(args.getLast(), qualifiedSignature));
+        } else if (categorizedProblem.getID() == MUST_OVERRIDE_OR_IMPLEMENT_SUPERTYPE_METHOD) {
+            String qualifiedSignature = "%s.%s(%s)".formatted(args.getLast(), args.getFirst(), unqualify(args.get(1)));
+            transformer.addProcessor((T) new SpoonClassTransformer().removeMethod(args.getLast(), qualifiedSignature));
+        } else if (categorizedProblem.getID() == METHOD_UNDEFINED) {
+            String qualifiedSignature = "%s(%s)".formatted(args.get(1), unqualify(args.getLast()));
+            transformer.addProcessor((T) new SpoonStatementCleaner().removeMethodCall(qualifiedSignature));
+        }
     }
 
     private static String unqualify(String params) {

@@ -9,6 +9,8 @@ import java.math.BigInteger;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static nl.jiankai.util.TypeUtil.getDefaultValue;
+
 public class MethodCallArgumentOperator<P> implements MigrationOperator {
     private static final Logger LOGGER = LoggerFactory.getLogger(MethodCallArgumentOperator.class);
     private final MethodCallTransformer<P> methodCallTransformer;
@@ -76,20 +78,7 @@ public class MethodCallArgumentOperator<P> implements MigrationOperator {
         }
     }
 
-    private <T> T getDefaultValue(String type) {
-        return (T) switch (type) {
-            case "int", "Integer", "short", "Short", "byte", "Byte" -> 0;
-            case "long", "Long" -> 0L;
-            case "char" -> '\u0000';
-            case "String" -> "";
-            case "float", "Float" -> 0.0f;
-            case "double", "Double" -> 0.0d;
-            case "BigDecimal" -> BigDecimal.ZERO;
-            case "BigInteger" -> BigInteger.ZERO;
-            case "boolean", "Boolean" -> false;
-            default -> null;
-        };
-    }
+
 
     private void removeArguments(Set<String> oldSet, Set<String> newSet, List<String> current, String currentSignature) {
         Set<String> removed = new HashSet<>(oldSet);
