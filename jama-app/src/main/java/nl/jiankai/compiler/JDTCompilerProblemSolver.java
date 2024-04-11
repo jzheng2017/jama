@@ -43,7 +43,8 @@ public class JDTCompilerProblemSolver {
         } catch (ModelBuildingException ignored) {
             LOGGER.info("Number of compiler errors: {}", modelBuilder.getProblems().size());
             LOGGER.info("=============================");
-            modelBuilder.getProblems().forEach(problem -> LOGGER.info(problem.toString()));
+            LOGGER.info("Errors (limited to 10):");
+            modelBuilder.getProblems().stream().limit(10).forEach(problem -> LOGGER.info(problem.toString()));
             LOGGER.info("=============================");
             modelBuilder.getProblems().forEach(problem -> solve(problem, transformer));
             transformer.run();

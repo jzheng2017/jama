@@ -27,7 +27,7 @@ public class SpoonTransformer implements Transformer<Processor<?>> {
     private Launcher getLauncher() {
         return switch (project.getProjectType()) {
             case ProjectType.MAVEN ->
-                    new MavenLauncher(project.getLocalPath().getAbsolutePath(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE);
+                    new MavenLauncher(project.getLocalPath().getAbsolutePath(), MavenLauncher.SOURCE_TYPE.APP_SOURCE);
             case UNKNOWN -> throw new UnsupportedOperationException("Unsupported project type");
         };
     }

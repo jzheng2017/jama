@@ -2,29 +2,35 @@ package nl.jiankai;
 
 import nl.jiankai.api.*;
 import nl.jiankai.impl.CompositeProjectFactory;
-import nl.jiankai.migration.MigrationPathEvaluatorImpl;
-import nl.jiankai.refactoringminer.RefactoringMinerImpl;
 import nl.jiankai.impl.git.JGitRepositoryFactory;
-import nl.jiankai.spoon.SpoonMethodCallTransformer;
-import nl.jiankai.spoon.SpoonMethodQuery;
+import spoon.Launcher;
+import spoon.MavenLauncher;
+import spoon.SpoonModelBuilder;
+import spoon.processing.AbstractProcessor;
+import spoon.processing.ProcessingManager;
+import spoon.reflect.CtModel;
+import spoon.reflect.cu.CompilationUnit;
+import spoon.reflect.cu.SourcePosition;
+import spoon.reflect.declaration.CtElement;
+import spoon.reflect.declaration.CtExecutable;
+import spoon.reflect.declaration.CtType;
+import spoon.reflect.declaration.ModifierKind;
+import spoon.reflect.reference.CtTypeReference;
+import spoon.reflect.visitor.filter.NamedElementFilter;
+import spoon.reflect.visitor.filter.TypeFilter;
+import spoon.support.QueueProcessingManager;
+import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
+import spoon.support.compiler.jdt.JDTSnippetCompiler;
 
 import java.io.File;
-import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 
 public class Jama {
+
     public static void main(String[] args) {
         GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/plugin-test-repo-2"));
         GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-text"));
         Migrator migrator = new Migrator(new File("/home/jiankai/test"));
-        migrator.migrate(migratedProject, dependencyProject, "78e2eae4", "d24eb575");
-//        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/plugin-test-repo-2"));
-//        Migrator migrator = new Migrator(new File("/home/jiankai/test"));
-//        migrator.migrate(migratedProject, dependencyProject, "7fdfc95d", "2714762");
-
-//        Project project = new CompositeProjectFactory().createProject(new File("/home/jiankai/IdeaProjects/plugin-test-repo-2"));
-//
-//        System.out.println(method.get());
+        migrator.migrate(migratedProject, dependencyProject, "404758e1", "083cdb5a", "1.11.0");
     }
 }
