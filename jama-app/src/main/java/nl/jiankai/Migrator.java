@@ -3,10 +3,12 @@ package nl.jiankai;
 import nl.jiankai.api.*;
 import nl.jiankai.impl.CompositeProjectFactory;
 import nl.jiankai.migration.MethodMigrationPathEvaluatorImpl;
+import nl.jiankai.operators.AttributeEncapsulationOperator;
 import nl.jiankai.operators.RenameMethodCallOperator;
 import nl.jiankai.operators.MethodCallArgumentOperator;
 import nl.jiankai.refactoringminer.RefactoringMinerImpl;
 import nl.jiankai.spoon.SpoonMethodCallTransformer;
+import nl.jiankai.spoon.SpoonStatementTransformer;
 import nl.jiankai.spoon.SpoonTransformer;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
@@ -59,7 +61,20 @@ public class Migrator {
 
     private void migrate(Migration migration, Transformer<Processor<?>> transformer) {
         MethodCallTransformer<Processor<?>> methodCallTransformer = new SpoonMethodCallTransformer();
+        StatementTransformer<Processor<?>> statementTransformer = new SpoonStatementTransformer();
         Set<RefactoringType> refactoringTypes = migration.refactorings();
+        handleAttributeMigrations(migration, transformer, refactoringTypes, statementTransformer);
+        handleMethodMigrations(migration, transformer, refactoringTypes, methodCallTransformer);
+    }
+
+    private static void handleAttributeMigrations(Migration migration, Transformer<Processor<?>> transformer, Set<RefactoringType> refactoringTypes, StatementTransformer<Processor<?>> statementTransformer) {
+        if (refactoringTypes.stream().anyMatch(RefactoringType::isAttributeRefactoring)) {
+            var encapsulate = new AttributeEncapsulationOperator<>(statementTransformer, transformer);
+            encapsulate.migrate(migration);
+        }
+    }
+
+    private static void handleMethodMigrations(Migration migration, Transformer<Processor<?>> transformer, Set<RefactoringType> refactoringTypes, MethodCallTransformer<Processor<?>> methodCallTransformer) {
         if (refactoringTypes.contains(RefactoringType.METHOD_NAME)) {
             var rename = new RenameMethodCallOperator<>(methodCallTransformer, transformer);
             rename.migrate(migration);

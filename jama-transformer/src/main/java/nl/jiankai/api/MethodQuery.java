@@ -1,8 +1,7 @@
 package nl.jiankai.api;
 
-import java.io.File;
 import java.util.Optional;
 
-public interface MethodQuery {
+public interface MethodQuery extends ElementHandler {
     Optional<Method> getMethod(String fullyQualifiedClassName, Position position);
 }

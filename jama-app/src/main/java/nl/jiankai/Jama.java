@@ -31,6 +31,6 @@ public class Jama {
         GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/plugin-test-repo-2"));
         GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-text"));
         Migrator migrator = new Migrator(new File("/home/jiankai/test"));
-        migrator.migrate(migratedProject, dependencyProject, "404758e1", "083cdb5a", "1.11.0");
+        migrator.migrate(migratedProject, dependencyProject, "404758e1", "01dee495", "1.11.1-SNAPSHOT");
     }
 }

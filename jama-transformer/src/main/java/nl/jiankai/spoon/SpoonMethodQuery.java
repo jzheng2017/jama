@@ -3,16 +3,12 @@ package nl.jiankai.spoon;
 import nl.jiankai.api.*;
 import spoon.Launcher;
 import spoon.MavenLauncher;
-import spoon.processing.AbstractProcessor;
 import spoon.reflect.CtModel;
-import spoon.reflect.code.CtInvocation;
 import spoon.reflect.cu.SourcePosition;
-import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.visitor.filter.TypeFilter;
 
-import java.io.File;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,7 +43,12 @@ public class SpoonMethodQuery implements MethodQuery {
     }
 
     private List<String> getArgumentTypes(CtMethod<?> method) {
-        return method.getParameters().stream().filter(argument -> argument.getType() != null).map(argument -> argument.getType().getQualifiedName()).toList();
+        return method
+                .getParameters()
+                .stream()
+                .filter(argument -> argument.getType() != null)
+                .map(argument -> argument.getType().getQualifiedName())
+                .toList();
     }
 
     private CtTypeReference<?> getClass(CtMethod<?> method) {

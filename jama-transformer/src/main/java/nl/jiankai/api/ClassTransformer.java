@@ -1,6 +1,6 @@
 package nl.jiankai.api;
 
-public interface ClassTransformer<P> {
+public interface ClassTransformer<P> extends ElementHandler {
 
     P implementMethod(String fullyQualifiedClass, String methodSignature);
 

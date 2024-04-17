@@ -43,4 +43,10 @@ public enum RefactoringType {
                         )
                 .contains(this);
     }
+
+    public boolean isAttributeRefactoring() {
+        return Set.of(
+                ENCAPSULATE_ATTRIBUTE
+        ).contains(this);
+    }
 }

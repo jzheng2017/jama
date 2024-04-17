@@ -1,6 +1,6 @@
 package nl.jiankai.api;
 
-public interface MethodCallTransformer<P> {
+public interface MethodCallTransformer<P> extends ElementHandler {
     /**
      * Renames the method name of all method calls matching the provided signature to a new name
      * @param originalSignature the signature of the original method that is being called
