@@ -57,10 +57,10 @@ public class JDTCompilerProblemSolver {
         List<String> args = Arrays.stream(categorizedProblem.getArguments()).toList();
         int size = args.size();
         if (categorizedProblem.getID() == MUST_IMPLEMENT_METHOD) {
-            String qualifiedSignature = "%s.%s(%s)".formatted(args.get(size - 2), args.getFirst(), unqualify(args.get(size - 3)));
+            String qualifiedSignature = "%s#%s(%s)".formatted(args.get(size - 2), args.getFirst(), unqualify(args.get(size - 3)));
             transformer.addProcessor((T) new SpoonClassTransformer().implementMethod(args.getLast(), qualifiedSignature));
         } else if (categorizedProblem.getID() == MUST_OVERRIDE_OR_IMPLEMENT_SUPERTYPE_METHOD) {
-            String qualifiedSignature = "%s.%s(%s)".formatted(args.getLast(), args.getFirst(), unqualify(args.get(1)));
+            String qualifiedSignature = "%s#%s(%s)".formatted(args.getLast(), args.getFirst(), unqualify(args.get(1)));
             transformer.addProcessor((T) new SpoonClassTransformer().removeMethod(args.getLast(), qualifiedSignature));
         } else if (categorizedProblem.getID() == METHOD_UNDEFINED) {
             String qualifiedSignature = "%s(%s)".formatted(args.get(1), unqualify(args.getLast()));

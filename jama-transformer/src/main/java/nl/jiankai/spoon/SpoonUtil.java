@@ -10,7 +10,7 @@ import java.util.List;
 public class SpoonUtil {
 
     public static String getSignature(CtMethod<?> method) {
-        return getClass(method) + "." + method.getReference().getSimpleName() + "(" + String.join(", ", getArgumentTypes(method)) + ")";
+        return getClass(method) + "#" + method.getReference().getSimpleName() + "(" + String.join(", ", getArgumentTypes(method)) + ")";
     }
 
     public static String getSignature(CtInvocation<?> methodCall) {

@@ -17,6 +17,7 @@ public class AttributeEncapsulationOperator<P> implements MigrationOperator {
 
     @Override
     public void migrate(Migration migration) {
-        transformer.addProcessor(statementTransformer.encapsulateAttribute("",""));
+        String getterSignature = migration.mapping().context().get("getter").toString();
+        transformer.addProcessor(statementTransformer.encapsulateAttribute(migration.mapping().original().signature(),getterSignature));
     }
 }
