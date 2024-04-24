@@ -8,12 +8,14 @@ import spoon.processing.Processor;
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.ModifierKind;
+import spoon.reflect.reference.CtTypeReference;
 
 import java.util.Collection;
 import java.util.Optional;
 
 public class SpoonClassTransformer implements ClassTransformer<Processor<CtClass<?>>> {
     private static final Logger LOGGER = LoggerFactory.getLogger(SpoonClassTransformer.class);
+
     @Override
     public Processor<CtClass<?>> implementMethod(String fullyQualifiedClass, String methodSignature) {
         return new AbstractProcessor<>() {
@@ -54,6 +56,32 @@ public class SpoonClassTransformer implements ClassTransformer<Processor<CtClass
                         LOGGER.info("Removing method {}", methodSignature);
                         ctClass.removeMethod(method);
                     });
+                });
+            }
+        };
+    }
+
+    @Override
+    public Processor<CtClass<?>> removeParent(String fullyQualifiedClass, String parentClass) {
+        return new AbstractProcessor<>() {
+            @Override
+            public void process(CtClass<?> ctClass) {
+                executeIfClassMatches(ctClass, fullyQualifiedClass, () -> {
+                    if (ctClass.getSuperclass() != null && ctClass.getSuperclass().getSimpleName().equals(parentClass)) {
+                        LOGGER.info("Removing super class '{}' from class '{}'", parentClass, fullyQualifiedClass);
+                        ctClass.setSuperclass(null);
+                    } else {
+
+                        ctClass
+                                .getSuperInterfaces()
+                                .stream()
+                                .filter(parent -> parent.getSimpleName().equals(parentClass))
+                                .findFirst()
+                                .ifPresent(ref -> {
+                                    LOGGER.info("Removing parent interface '{}' from class '{}'", parentClass, fullyQualifiedClass);
+                                    ctClass.removeSuperInterface(ref);
+                                });
+                    }
                 });
             }
         };

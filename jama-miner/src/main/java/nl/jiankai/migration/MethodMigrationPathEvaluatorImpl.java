@@ -13,7 +13,7 @@ public class MethodMigrationPathEvaluatorImpl implements MigrationPathEvaluator 
     public Collection<Migration> evaluate(Collection<Refactoring> refactorings) {
         Map<Integer, List<Refactoring>> methods = refactorings.
                 stream()
-//                .filter(refactoring -> refactoring.refactoringType().isMethodRefactoring())
+                .filter(refactoring -> refactoring.refactoringType().isBreaking())
                 .collect(Collectors.groupingBy(Refactoring::sequence));
         List<Migration> migrations = new ArrayList<>();
         int maxSeq = methods.keySet().stream().max(Integer::compareTo).orElse(1);

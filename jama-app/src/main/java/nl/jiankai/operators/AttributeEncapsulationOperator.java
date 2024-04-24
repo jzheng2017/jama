@@ -1,6 +1,5 @@
 package nl.jiankai.operators;
 
-import nl.jiankai.api.MethodCallTransformer;
 import nl.jiankai.api.Migration;
 import nl.jiankai.api.StatementTransformer;
 import nl.jiankai.api.Transformer;

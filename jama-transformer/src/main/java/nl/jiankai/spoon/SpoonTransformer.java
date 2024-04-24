@@ -1,5 +1,6 @@
 package nl.jiankai.spoon;
 
+import nl.jiankai.api.GitRepository;
 import nl.jiankai.api.Project;
 import nl.jiankai.api.ProjectType;
 import nl.jiankai.api.Transformer;
@@ -13,6 +14,8 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
+import static nl.jiankai.spoon.SpoonUtil.*;
+
 public class SpoonTransformer implements Transformer<Processor<?>> {
     private final Project project;
     private final File targetDirectory;
@@ -24,13 +27,7 @@ public class SpoonTransformer implements Transformer<Processor<?>> {
     }
 
 
-    private Launcher getLauncher() {
-        return switch (project.getProjectType()) {
-            case ProjectType.MAVEN ->
-                    new MavenLauncher(project.getLocalPath().getAbsolutePath(), MavenLauncher.SOURCE_TYPE.APP_SOURCE);
-            case UNKNOWN -> throw new UnsupportedOperationException("Unsupported project type");
-        };
-    }
+
 
     @Override
     public void addProcessor(Processor<?> processor) {
@@ -44,7 +41,7 @@ public class SpoonTransformer implements Transformer<Processor<?>> {
 
     @Override
     public void run() {
-        Launcher launcher = getLauncher();
+        Launcher launcher = getLauncher(project);
         processors.forEach(launcher::addProcessor);
         launcher.setSourceOutputDirectory(new File(targetDirectory, Paths.get("src", "main", "java").toString()));
         launcher.getEnvironment()

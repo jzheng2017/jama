@@ -1,5 +1,9 @@
 package nl.jiankai.spoon;
 
+import nl.jiankai.api.Project;
+import nl.jiankai.api.ProjectType;
+import spoon.Launcher;
+import spoon.MavenLauncher;
 import spoon.reflect.code.CtInvocation;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtMethod;
@@ -9,12 +13,20 @@ import java.util.List;
 
 public class SpoonUtil {
 
+    public static Launcher getLauncher(Project project) {
+        return switch (project.getProjectType()) {
+            case ProjectType.MAVEN ->
+                    new MavenLauncher(project.getLocalPath().getAbsolutePath(), MavenLauncher.SOURCE_TYPE.APP_SOURCE);
+            case UNKNOWN -> throw new UnsupportedOperationException("Unsupported project type");
+        };
+    }
+
     public static String getSignature(CtMethod<?> method) {
         return getClass(method) + "#" + method.getReference().getSimpleName() + "(" + String.join(", ", getArgumentTypes(method)) + ")";
     }
 
     public static String getSignature(CtInvocation<?> methodCall) {
-        return getClass(methodCall) + "." + methodCall.getExecutable().getSimpleName() + "(" + String.join(", ", getArgumentTypes(methodCall)) + ")";
+        return getClass(methodCall) + "#" + methodCall.getExecutable().getSimpleName() + "(" + String.join(", ", getArgumentTypes(methodCall)) + ")";
     }
 
     public static String getSignatureWithoutClass(CtInvocation<?> methodCall) {

@@ -1,6 +1,8 @@
 package nl.jiankai.api;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public record Migration(ApiMapping mapping, Migration next) {
@@ -24,5 +26,19 @@ public record Migration(ApiMapping mapping, Migration next) {
         }
 
         return refactoringTypes;
+    }
+
+    public List<Object> getContext(String key) {
+        Migration current = this;
+        List<Object> context = new ArrayList<>();
+
+        while (current != null) {
+            if (current.mapping.context().containsKey(key)) {
+                context.add(current.mapping.context().get(key));
+            }
+            current = current.next;
+        }
+
+        return context;
     }
 }

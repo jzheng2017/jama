@@ -34,6 +34,14 @@ public class FileUtil {
                 .toList();
     }
 
+    public static String javaFileNameToFullyQualifiedClass(String javaFileName) {
+        int startIndex = javaFileName.indexOf("java/");
+        javaFileName = javaFileName.substring(startIndex+5);
+        javaFileName = javaFileName.replace("/", ".");
+
+        return javaFileName.substring(0, javaFileName.length()-5);
+    }
+
     public static class FileNotFoundException extends RuntimeException {
         public FileNotFoundException(String errorMessage) {
             super(errorMessage);

@@ -5,6 +5,8 @@ import nl.jiankai.api.Project;
 import nl.jiankai.api.Transformer;
 import nl.jiankai.spoon.SpoonClassTransformer;
 import nl.jiankai.spoon.SpoonStatementCleaner;
+import nl.jiankai.spoon.SpoonStatementTransformer;
+import nl.jiankai.util.FileUtil;
 import org.eclipse.jdt.core.compiler.CategorizedProblem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +27,9 @@ public class JDTCompilerProblemSolver {
     public static final int MUST_OVERRIDE_OR_IMPLEMENT_SUPERTYPE_METHOD = 67109498;
     public static final int MUST_IMPLEMENT_METHOD = 67109264;
     public static final int METHOD_ARGUMENTS_PROVIDED_NOT_APPLICABLE = 67108979;
+    public static final int CANNOT_BE_RESOLVED_TO_A_TYPE = 16777218;
+    public static final int UNHANDLED_EXCEPTION = 16777384;
+
 
     public static <T> void compile(Project project, Transformer<T> transformer) {
         compile(project, transformer, 1);
@@ -53,7 +58,7 @@ public class JDTCompilerProblemSolver {
         }
     }
 
-    private static  <T> void solve(CategorizedProblem categorizedProblem, Transformer<T> transformer) {
+    private static <T> void solve(CategorizedProblem categorizedProblem, Transformer<T> transformer) {
         List<String> args = Arrays.stream(categorizedProblem.getArguments()).toList();
         int size = args.size();
         if (categorizedProblem.getID() == MUST_IMPLEMENT_METHOD) {
@@ -65,6 +70,9 @@ public class JDTCompilerProblemSolver {
         } else if (categorizedProblem.getID() == METHOD_UNDEFINED) {
             String qualifiedSignature = "%s(%s)".formatted(args.get(1), unqualify(args.getLast()));
             transformer.addProcessor((T) new SpoonStatementCleaner().removeMethodCall(qualifiedSignature));
+        } else if (categorizedProblem.getID() == CANNOT_BE_RESOLVED_TO_A_TYPE) {
+            String className = FileUtil.javaFileNameToFullyQualifiedClass(new String(categorizedProblem.getOriginatingFileName()));
+            transformer.addProcessor((T) new SpoonClassTransformer().removeParent(className, args.getFirst()));
         }
     }
 

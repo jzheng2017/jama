@@ -4,6 +4,7 @@ import nl.jiankai.api.*;
 import nl.jiankai.impl.CompositeProjectFactory;
 import nl.jiankai.migration.MethodMigrationPathEvaluatorImpl;
 import nl.jiankai.operators.AttributeEncapsulationOperator;
+import nl.jiankai.operators.MethodExceptionOperator;
 import nl.jiankai.operators.RenameMethodCallOperator;
 import nl.jiankai.operators.MethodCallArgumentOperator;
 import nl.jiankai.refactoringminer.RefactoringMinerImpl;
@@ -42,10 +43,12 @@ public class Migrator {
         Collection<Refactoring> refactorings = refactoringMiner.detectRefactoringBetweenCommit(dependencyProject, startCommitId, endCommitId);
         LOGGER.info("Found {} refactorings", refactorings.size());
         Transformer<Processor<?>> transformer = new SpoonTransformer(toMigrateProject, outputDirectory);
+        MethodCallTransformer<Processor<?>> methodCallTransformer = new SpoonMethodCallTransformer();
+        StatementTransformer<Processor<?>> statementTransformer = new SpoonStatementTransformer(dependencyProject);
         MigrationPathEvaluator migrationPathEvaluator = new MethodMigrationPathEvaluatorImpl();
         migrationPathEvaluator
                 .evaluate(refactorings)
-                .forEach(migration -> migrate(migration, transformer));
+                .forEach(migration -> migrate(migration, transformer, statementTransformer, methodCallTransformer));
         try {
             transformer.run();
         } catch (ModelBuildingException e) {
@@ -59,22 +62,23 @@ public class Migrator {
         compile(migratedProject, compilationTransformer);
     }
 
-    private void migrate(Migration migration, Transformer<Processor<?>> transformer) {
-        MethodCallTransformer<Processor<?>> methodCallTransformer = new SpoonMethodCallTransformer();
-        StatementTransformer<Processor<?>> statementTransformer = new SpoonStatementTransformer();
-        Set<RefactoringType> refactoringTypes = migration.refactorings();
-        handleAttributeMigrations(migration, transformer, refactoringTypes, statementTransformer);
-        handleMethodMigrations(migration, transformer, refactoringTypes, methodCallTransformer);
+    private void migrate(Migration migration, Transformer<Processor<?>> transformer, StatementTransformer<Processor<?>> statementTransformer, MethodCallTransformer<Processor<?>> methodCallTransformer) {
+
+        handleAttributeMigrations(migration, transformer, statementTransformer);
+        handleMethodMigrations(migration, transformer, methodCallTransformer, statementTransformer);
     }
 
-    private static void handleAttributeMigrations(Migration migration, Transformer<Processor<?>> transformer, Set<RefactoringType> refactoringTypes, StatementTransformer<Processor<?>> statementTransformer) {
+    private static void handleAttributeMigrations(Migration migration, Transformer<Processor<?>> transformer, StatementTransformer<Processor<?>> statementTransformer) {
+        Set<RefactoringType> refactoringTypes = migration.refactorings();
         if (refactoringTypes.stream().anyMatch(RefactoringType::isAttributeRefactoring)) {
             var encapsulate = new AttributeEncapsulationOperator<>(statementTransformer, transformer);
             encapsulate.migrate(migration);
         }
     }
 
-    private static void handleMethodMigrations(Migration migration, Transformer<Processor<?>> transformer, Set<RefactoringType> refactoringTypes, MethodCallTransformer<Processor<?>> methodCallTransformer) {
+    private static void handleMethodMigrations(Migration migration, Transformer<Processor<?>> transformer, MethodCallTransformer<Processor<?>> methodCallTransformer, StatementTransformer<Processor<?>> statementTransformer) {
+        Set<RefactoringType> refactoringTypes = migration.refactorings();
+
         if (refactoringTypes.contains(RefactoringType.METHOD_NAME)) {
             var rename = new RenameMethodCallOperator<>(methodCallTransformer, transformer);
             rename.migrate(migration);
@@ -83,6 +87,11 @@ public class Migrator {
         if (refactoringTypes.stream().anyMatch(RefactoringType::isMethodParameterRefactoring)) {
             var argumentsOperator = new MethodCallArgumentOperator<>(methodCallTransformer, transformer);
             argumentsOperator.migrate(migration);
+        }
+
+        if (refactoringTypes.stream().anyMatch(RefactoringType::isExceptionRefactoring)) {
+            var exception = new MethodExceptionOperator<>(statementTransformer, transformer);
+            exception.migrate(migration);
         }
     }
 }

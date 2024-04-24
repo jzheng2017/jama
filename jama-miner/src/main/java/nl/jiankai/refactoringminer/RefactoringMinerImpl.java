@@ -80,6 +80,8 @@ public class RefactoringMinerImpl implements RefactoringMiner {
                                 "getter", getSignatureUMLOperation(ear.getAddedGetter()),
                                 "setter", getSignatureUMLOperation(ear.getAddedSetter())
                         );
+                    } else if (r instanceof AddThrownExceptionTypeRefactoring atetr) {
+                        return Map.of("exception", atetr.getExceptionType().toQualifiedString());
                     }
                     return new HashMap<>();
                 }
@@ -108,7 +110,7 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             return getBeforeFullyQualifiedClassName(refactoring) + "#" + getBeforeElementName(refactoring);
         } else {
             String parameters = getBeforeParameters(refactoring);
-            return getBeforeFullyQualifiedClassName(refactoring) + "." + getBeforeElementName(refactoring) + (parameters.isEmpty() ? "" : parameters);
+            return getBeforeFullyQualifiedClassName(refactoring) + "#" + getBeforeElementName(refactoring) + (parameters.isEmpty() ? "" : parameters);
         }
     }
 
@@ -136,6 +138,8 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             parameters += ropr.getParametersBefore().stream().map(VariableDeclaration::getType).map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
         } else if (refactoring instanceof RenameVariableRefactoring rvr) {
             parameters += rvr.getOperationBefore().getParameterTypeList().stream().map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+        } else if (refactoring instanceof AddThrownExceptionTypeRefactoring atet) {
+            parameters += atet.getOperationBefore().getParameterTypeList().stream().map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
         }
 
         return parameters + ")";
@@ -146,7 +150,7 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             return getAfterFullyQualifiedClassName(refactoring) + "#" + getAfterElementName(refactoring);
         } else {
             String parameters = getAfterParameters(refactoring);
-            return getAfterFullyQualifiedClassName(refactoring) + "." + getAfterElementName(refactoring) + (parameters.isEmpty() ? "" : parameters);
+            return getAfterFullyQualifiedClassName(refactoring) + "#" + getAfterElementName(refactoring) + (parameters.isEmpty() ? "" : parameters);
         }
     }
 
@@ -166,6 +170,8 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             parameters += ropr.getParametersAfter().stream().map(VariableDeclaration::getType).map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
         } else if (refactoring instanceof RenameVariableRefactoring rvr) {
             parameters += rvr.getOperationAfter().getParameterTypeList().stream().map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+        } else if (refactoring instanceof AddThrownExceptionTypeRefactoring atet) {
+            parameters += atet.getOperationAfter().getParameterTypeList().stream().map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
         }
 
         return parameters + ")";
@@ -186,8 +192,10 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             return ropr.getOperationAfter().getClassName();
         } else if (refactoring instanceof RenameVariableRefactoring rvr) {
             return rvr.getOperationAfter().getClassName();
-        }  else if (refactoring instanceof EncapsulateAttributeRefactoring ear) {
-            return  ear.getAttributeAfter().getClassName();
+        } else if (refactoring instanceof EncapsulateAttributeRefactoring ear) {
+            return ear.getAttributeAfter().getClassName();
+        } else if (refactoring instanceof AddThrownExceptionTypeRefactoring atet) {
+            return atet.getOperationAfter().getClassName();
         }
 
         return "";
@@ -208,8 +216,10 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             return ropr.getOperationBefore().getClassName();
         } else if (refactoring instanceof RenameVariableRefactoring rvr) {
             return rvr.getOperationBefore().getClassName();
-        }  else if (refactoring instanceof EncapsulateAttributeRefactoring ear) {
-            return  ear.getAttributeBefore().getClassName();
+        } else if (refactoring instanceof EncapsulateAttributeRefactoring ear) {
+            return ear.getAttributeBefore().getClassName();
+        } else if (refactoring instanceof AddThrownExceptionTypeRefactoring atet) {
+            return atet.getOperationBefore().getClassName();
         }
 
         return "";
@@ -232,6 +242,8 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             return rvr.getOperationBefore().getLocationInfo().getFilePath();
         } else if (refactoring instanceof EncapsulateAttributeRefactoring ear) {
             return ear.getAttributeBefore().getLocationInfo().getFilePath();
+        } else if (refactoring instanceof AddThrownExceptionTypeRefactoring atet) {
+            return atet.getOperationBefore().getLocationInfo().getFilePath();
         }
 
         return "";
@@ -255,6 +267,8 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             codeRange = rvr.getOperationBefore().codeRange();
         } else if (refactoring instanceof EncapsulateAttributeRefactoring ear) {
             codeRange = ear.getAttributeBefore().codeRange();
+        } else if (refactoring instanceof AddThrownExceptionTypeRefactoring atet) {
+            codeRange = atet.getOperationBefore().codeRange();
         }
 
         if (codeRange == null) {
@@ -275,12 +289,14 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             return cvtr.getOperationBefore().getName();
         } else if (refactoring instanceof RenameOperationRefactoring ror) {
             return ror.getOriginalOperation().getName();
-        }  else if (refactoring instanceof ReorderParameterRefactoring ropr) {
+        } else if (refactoring instanceof ReorderParameterRefactoring ropr) {
             return ropr.getOperationBefore().getName();
         } else if (refactoring instanceof RenameVariableRefactoring rvr) {
             return rvr.getOperationBefore().getName();
         } else if (refactoring instanceof EncapsulateAttributeRefactoring ear) {
             return ear.getAttributeBefore().getName();
+        } else if (refactoring instanceof AddThrownExceptionTypeRefactoring atet) {
+            return atet.getOperationBefore().getName();
         }
 
         return "";
@@ -297,12 +313,14 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             return cvtr.getOperationBefore().getClassName();
         } else if (refactoring instanceof RenameOperationRefactoring ror) {
             return ror.getOriginalOperation().getClassName();
-        }  else if (refactoring instanceof ReorderParameterRefactoring ropr) {
+        } else if (refactoring instanceof ReorderParameterRefactoring ropr) {
             return ropr.getOperationBefore().getClassName();
         } else if (refactoring instanceof RenameVariableRefactoring rvr) {
             return rvr.getOperationBefore().getClassName();
         } else if (refactoring instanceof EncapsulateAttributeRefactoring ear) {
-            return ear.getAttributeAfter().getClassName();
+            return ear.getAttributeBefore().getClassName();
+        } else if (refactoring instanceof AddThrownExceptionTypeRefactoring atet) {
+            return atet.getOperationBefore().getClassName();
         }
 
         return "";
@@ -319,12 +337,14 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             return cvtr.getOperationAfter().getLocationInfo().getFilePath();
         } else if (refactoring instanceof RenameOperationRefactoring ror) {
             return ror.getRenamedOperation().getLocationInfo().getFilePath();
-        }  else if (refactoring instanceof ReorderParameterRefactoring ropr) {
+        } else if (refactoring instanceof ReorderParameterRefactoring ropr) {
             return ropr.getOperationAfter().getClassName();
         } else if (refactoring instanceof RenameVariableRefactoring rvr) {
             return rvr.getOperationAfter().getLocationInfo().getFilePath();
         } else if (refactoring instanceof EncapsulateAttributeRefactoring ear) {
             return ear.getAttributeAfter().getLocationInfo().getFilePath();
+        } else if (refactoring instanceof AddThrownExceptionTypeRefactoring atet) {
+            return atet.getOperationAfter().getLocationInfo().getFilePath();
         }
 
         return "";
@@ -342,12 +362,14 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             codeRange = cvtr.getOperationAfter().codeRange();
         } else if (refactoring instanceof RenameOperationRefactoring ror) {
             codeRange = ror.getTargetOperationCodeRangeAfterRename();
-        }  else if (refactoring instanceof ReorderParameterRefactoring ropr) {
-            codeRange = ropr.getOperationBefore().codeRange();
+        } else if (refactoring instanceof ReorderParameterRefactoring ropr) {
+            codeRange = ropr.getOperationAfter().codeRange();
         } else if (refactoring instanceof RenameVariableRefactoring rvr) {
             codeRange = rvr.getOperationAfter().codeRange();
         } else if (refactoring instanceof EncapsulateAttributeRefactoring ear) {
             codeRange = ear.getAttributeAfter().codeRange();
+        } else if (refactoring instanceof AddThrownExceptionTypeRefactoring atet) {
+            codeRange = atet.getOperationAfter().codeRange();
         }
 
 
@@ -369,12 +391,14 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             return cvtr.getOperationAfter().getName();
         } else if (refactoring instanceof RenameOperationRefactoring ror) {
             return ror.getRenamedOperation().getName();
-        }  else if (refactoring instanceof ReorderParameterRefactoring ropr) {
+        } else if (refactoring instanceof ReorderParameterRefactoring ropr) {
             return ropr.getOperationAfter().getName();
-        }else if (refactoring instanceof RenameVariableRefactoring rvr) {
+        } else if (refactoring instanceof RenameVariableRefactoring rvr) {
             return rvr.getOperationAfter().getName();
         } else if (refactoring instanceof EncapsulateAttributeRefactoring ear) {
             return ear.getAttributeAfter().getName();
+        } else if (refactoring instanceof AddThrownExceptionTypeRefactoring atet) {
+            return atet.getOperationAfter().getName();
         }
 
 
@@ -392,12 +416,14 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             return cvtr.getOperationAfter().getClassName();
         } else if (refactoring instanceof RenameOperationRefactoring ror) {
             return ror.getRenamedOperation().getClassName();
-        }  else if (refactoring instanceof ReorderParameterRefactoring ropr) {
+        } else if (refactoring instanceof ReorderParameterRefactoring ropr) {
             return ropr.getOperationAfter().getClassName();
         } else if (refactoring instanceof RenameVariableRefactoring rvr) {
             return rvr.getOperationAfter().getClassName();
         } else if (refactoring instanceof EncapsulateAttributeRefactoring ear) {
             return ear.getAttributeAfter().getClassName();
+        } else if (refactoring instanceof AddThrownExceptionTypeRefactoring atet) {
+            return atet.getOperationAfter().getClassName();
         }
 
         return "";
@@ -417,6 +443,7 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             case RENAME_CLASS -> RefactoringType.CLASS_NAME;
             case RENAME_PACKAGE -> RefactoringType.PACKAGE_NAME;
             case REORDER_PARAMETER -> RefactoringType.REORDER_PARAMETER;
+            case ADD_THROWN_EXCEPTION_TYPE -> RefactoringType.ADD_THROWN_EXCEPTION;
             default -> RefactoringType.UNKNOWN;
         };
     }

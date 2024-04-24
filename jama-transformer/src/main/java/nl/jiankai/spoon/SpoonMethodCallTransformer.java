@@ -10,7 +10,6 @@ import spoon.reflect.code.CtInvocation;
 import java.util.Collections;
 
 import static nl.jiankai.spoon.SpoonUtil.executeIfMethodCallMatches;
-import static nl.jiankai.spoon.SpoonUtil.getSignature;
 
 public class SpoonMethodCallTransformer implements MethodCallTransformer<Processor<?>> {
     private static final Logger LOGGER = LoggerFactory.getLogger(SpoonMethodCallTransformer.class);
