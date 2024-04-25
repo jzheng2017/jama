@@ -2,6 +2,8 @@ package nl.jiankai.spoon;
 
 import nl.jiankai.api.Project;
 import nl.jiankai.api.ProjectType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import spoon.Launcher;
 import spoon.MavenLauncher;
 import spoon.reflect.code.CtInvocation;
@@ -12,6 +14,7 @@ import spoon.reflect.reference.CtTypeReference;
 import java.util.List;
 
 public class SpoonUtil {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SpoonUtil.class);
 
     public static Launcher getLauncher(Project project) {
         return switch (project.getProjectType()) {
@@ -50,6 +53,7 @@ public class SpoonUtil {
 
         if (parent instanceof CtInvocation<?> parentMethodCall) {
             int index = parentMethodCall.getArguments().indexOf(methodCall);
+            LOGGER.info("Inferring method call type for '{}'", methodCall.getExecutable().getSignature());
             return parentMethodCall.getExecutable().getParameters().get(index).getSimpleName();
         }
 

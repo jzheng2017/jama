@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 public class JDTCompilerProblemSolver {
     private static final Logger LOGGER = LoggerFactory.getLogger(JDTCompilerProblemSolver.class);
     private static final int MAX_ITERATIONS = 2;
-
+    private static final int ERROR_LIMIT = 50;
     public static final int METHOD_UNDEFINED = 67108964;
     public static final int MUST_OVERRIDE_OR_IMPLEMENT_SUPERTYPE_METHOD = 67109498;
     public static final int MUST_IMPLEMENT_METHOD = 67109264;
@@ -48,8 +48,8 @@ public class JDTCompilerProblemSolver {
         } catch (ModelBuildingException ignored) {
             LOGGER.info("Number of compiler errors: {}", modelBuilder.getProblems().size());
             LOGGER.info("=============================");
-            LOGGER.info("Errors (limited to 10):");
-            modelBuilder.getProblems().stream().limit(10).forEach(problem -> LOGGER.info(problem.toString()));
+            LOGGER.info("Errors (limited to {}):", ERROR_LIMIT);
+            modelBuilder.getProblems().stream().limit(ERROR_LIMIT).forEach(problem -> LOGGER.info(problem.toString()));
             LOGGER.info("=============================");
             modelBuilder.getProblems().forEach(problem -> solve(problem, transformer));
             transformer.run();

@@ -28,9 +28,9 @@ import java.util.List;
 public class Jama {
 
     public static void main(String[] args) {
-        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/plugin-test-repo-2"));
+        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/whirlpool-server"));
         GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-text"));
-        Migrator migrator = new Migrator(new File("/home/jiankai/test"));
-        migrator.migrate(migratedProject, dependencyProject, "404758e1", "01dee495", "1.11.1-SNAPSHOT");
+        Migrator migrator = new Migrator(new File("/home/jiankai/test/" + migratedProject.getLocalPath().getName()));
+        migrator.migrate(migratedProject, dependencyProject, "404758e1", "2135fbc8", "1.11.1-SNAPSHOT");
     }
 }

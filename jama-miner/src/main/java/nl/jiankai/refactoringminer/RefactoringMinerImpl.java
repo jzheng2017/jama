@@ -115,6 +115,9 @@ public class RefactoringMinerImpl implements RefactoringMiner {
     }
 
     private String getSignatureUMLOperation(UMLOperation umlOperation) {
+        if (umlOperation == null) {
+            return "";
+        }
         return umlOperation.getClassName() + "#" + umlOperation.getName() + "(%s)".formatted(getParametersUMLOperation(umlOperation));
     }
 
