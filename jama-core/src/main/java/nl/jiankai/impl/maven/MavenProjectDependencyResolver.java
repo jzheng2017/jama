@@ -81,7 +81,7 @@ public final class MavenProjectDependencyResolver implements ProjectDependencyRe
             File file = FileUtil.findPomFile(projectRootPath);
             InvocationRequest request = new DefaultInvocationRequest();
             request.setPomFile(file);
-            request.setGoals(Collections.singletonList("compile"));
+            request.setGoals(Collections.singletonList("clean compile -Dskiptests"));
             Invoker invoker = new DefaultInvoker();
 
             try {

@@ -17,6 +17,6 @@ public class MethodExceptionOperator<P> implements MigrationOperator{
     @Override
     public void migrate(Migration migration) {
         String methodSignature = migration.end().target().signature();
-        transformer.addProcessor(statementTransformer.handleCheckedException("org.apache.commons.text.WordUtils#capitalizeV3(String)", migration.getContext("exception").stream().map(String.class::cast).collect(Collectors.toSet())));
+        transformer.addProcessor(statementTransformer.handleException("org.apache.commons.text.WordUtils#capitalizeV3(String)", migration.getContext("exception").stream().map(String.class::cast).collect(Collectors.toSet())));
     }
 }

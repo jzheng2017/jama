@@ -6,6 +6,7 @@ import nl.jiankai.api.Transformer;
 import nl.jiankai.spoon.SpoonClassTransformer;
 import nl.jiankai.spoon.SpoonStatementCleaner;
 import nl.jiankai.spoon.SpoonStatementTransformer;
+import nl.jiankai.spoon.SpoonUtil;
 import nl.jiankai.util.FileUtil;
 import org.eclipse.jdt.core.compiler.CategorizedProblem;
 import org.slf4j.Logger;
@@ -18,6 +19,9 @@ import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static nl.jiankai.spoon.SpoonUtil.getLauncher;
 
 public class JDTCompilerProblemSolver {
     private static final Logger LOGGER = LoggerFactory.getLogger(JDTCompilerProblemSolver.class);
@@ -40,18 +44,19 @@ public class JDTCompilerProblemSolver {
             return;
         }
         LOGGER.info("Compilation iteration {}", iterations);
-        Launcher launcher = new MavenLauncher(project.getLocalPath().getAbsolutePath(), MavenLauncher.SOURCE_TYPE.APP_SOURCE);
+        Launcher launcher = getLauncher(project);
         JDTBasedSpoonCompiler modelBuilder = (JDTBasedSpoonCompiler) launcher.getModelBuilder();
         try {
             modelBuilder.build();
             LOGGER.info("Compilation finished with zero errors");
         } catch (ModelBuildingException ignored) {
+            List<CategorizedProblem> problems = modelBuilder.getProblems().stream().filter(CategorizedProblem::isError).toList();
             LOGGER.info("Number of compiler errors: {}", modelBuilder.getProblems().size());
             LOGGER.info("=============================");
             LOGGER.info("Errors (limited to {}):", ERROR_LIMIT);
-            modelBuilder.getProblems().stream().limit(ERROR_LIMIT).forEach(problem -> LOGGER.info(problem.toString()));
+            problems.stream().limit(ERROR_LIMIT).forEach(problem -> LOGGER.info(problem.toString()));
             LOGGER.info("=============================");
-            modelBuilder.getProblems().forEach(problem -> solve(problem, transformer));
+            problems.forEach(problem -> solve(problem, transformer));
             transformer.run();
             transformer.reset();
             compile(project, transformer, iterations + 1);

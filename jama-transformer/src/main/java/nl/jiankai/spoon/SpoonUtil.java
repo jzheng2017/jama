@@ -10,6 +10,7 @@ import spoon.reflect.code.CtInvocation;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.reference.CtTypeReference;
+import spoon.reflect.visitor.DefaultJavaPrettyPrinter;
 
 import java.util.List;
 
@@ -17,11 +18,22 @@ public class SpoonUtil {
     private static final Logger LOGGER = LoggerFactory.getLogger(SpoonUtil.class);
 
     public static Launcher getLauncher(Project project) {
-        return switch (project.getProjectType()) {
+        Launcher launcher = switch (project.getProjectType()) {
             case ProjectType.MAVEN ->
-                    new MavenLauncher(project.getLocalPath().getAbsolutePath(), MavenLauncher.SOURCE_TYPE.APP_SOURCE);
+                    new MavenLauncher(project.getLocalPath().getAbsolutePath(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE);
             case UNKNOWN -> throw new UnsupportedOperationException("Unsupported project type");
         };
+
+        launcher.getEnvironment().setAutoImports(true);
+        launcher.getEnvironment()
+                .setPrettyPrinterCreator(() -> {
+                    DefaultJavaPrettyPrinter printer = new DefaultJavaPrettyPrinter(launcher.getEnvironment());
+                    printer.setIgnoreImplicit(false);
+                    return printer;
+                });
+        launcher.getEnvironment().setNoClasspath(true); //which allows us to suppress compilation errors (no exception thrown)
+
+        return launcher;
     }
 
     public static String getSignature(CtMethod<?> method) {

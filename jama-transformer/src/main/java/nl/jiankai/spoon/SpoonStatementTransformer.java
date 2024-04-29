@@ -8,16 +8,15 @@ import spoon.Launcher;
 import spoon.processing.AbstractProcessor;
 import spoon.processing.Processor;
 import spoon.reflect.CtModel;
-import spoon.reflect.code.CtFieldAccess;
-import spoon.reflect.code.CtInvocation;
+import spoon.reflect.code.*;
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.visitor.filter.TypeFilter;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static nl.jiankai.spoon.SpoonUtil.getLauncher;
 
@@ -25,10 +24,8 @@ public class SpoonStatementTransformer implements StatementTransformer<Processor
     private static final Logger LOGGER = LoggerFactory.getLogger(SpoonStatementTransformer.class);
     private final CtModel dependencyModel;
 
-    public SpoonStatementTransformer(Project dependencyProject) {
-        Launcher launcher = getLauncher(dependencyProject);
-        launcher.buildModel();
-        dependencyModel = launcher.getModel();
+    public SpoonStatementTransformer(CtModel dependencyModel) {
+        this.dependencyModel = dependencyModel;
     }
 
     @Override
@@ -53,21 +50,54 @@ public class SpoonStatementTransformer implements StatementTransformer<Processor
     }
 
     @Override
-    public Processor<?> handleCheckedException(String methodSignature, Set<String> checkedException) {
+    public Processor<?> handleException(String methodSignature, Set<String> exceptions) {
         return new AbstractProcessor<CtInvocation<?>>() {
             @Override
             public void process(CtInvocation<?> methodCall) {
-//                SpoonUtil.executeIfMethodCallMatches(methodCall, methodSignature, () -> {
-//                    dependencyModel
-//                            .getElements(new TypeFilter<>(CtMethod.class))
-//                            .stream()
-//                            .filter(m -> SpoonUtil.getSignature(m).equals(methodSignature))
-//                            .findFirst()
-//                            .ifPresent(method -> {
-//                                List<CtTypeReference<? extends Throwable>> exceptions = method.getThrownTypes().stream().filter(t -> checkedException.contains(((CtTypeReference)t).getSimpleName())).toList();
-//                                System.out.println(exceptions);
-//                            });
-//                });
+                SpoonUtil.executeIfMethodCallMatches(methodCall, methodSignature, () -> {
+                    dependencyModel
+                            .getElements(new TypeFilter<>(CtMethod.class))
+                            .stream()
+                            .filter(m -> SpoonUtil.getSignature(m).equals(methodSignature))
+                            .findFirst()
+                            .ifPresent(method -> {
+                                LinkedList<CtTypeReference<? extends Throwable>> methodExceptions = getExceptionsFromMethod(method, exceptions);
+
+                                CtStatement parent = methodCall;
+
+                                while (!(parent.getParent() instanceof CtBlock<?>)) {
+                                    parent = (CtStatement) parent.getParent();
+                                }
+
+                                CtTry tryElement = getFactory().createTry();
+                                tryElement.setBody(parent.clone());
+                                CtComment catchBlockComment = getFactory().createInlineComment("handle me");
+                                CtBlock<?> catchBlock = getFactory().createCtBlock(catchBlockComment);
+
+                                List<CtTypeReference<? extends Throwable>> alreadyCaughtExceptions = new ArrayList<>();
+
+                                while (!methodExceptions.isEmpty()) {
+                                    CtTypeReference<? extends Throwable> exception = methodExceptions.poll();
+                                    boolean canBeCaughtByExceptionHigherInHierarchy = Stream.concat(alreadyCaughtExceptions.stream(), methodExceptions.stream()).anyMatch(e -> e.getActualClass().isAssignableFrom(exception.getActualClass()));
+
+                                    if (!canBeCaughtByExceptionHigherInHierarchy) {
+                                        CtCatch ctElement = getFactory().createCtCatch("e", exception.getActualClass(), catchBlock);
+                                        tryElement.addCatcher(ctElement);
+                                        alreadyCaughtExceptions.add(exception);
+                                    }
+                                }
+
+                                parent.replace(tryElement);
+                            });
+                });
+            }
+
+            private static LinkedList<CtTypeReference<? extends Throwable>> getExceptionsFromMethod(CtMethod method, Set<String> exceptions) {
+                return (LinkedList<CtTypeReference<? extends Throwable>>) method
+                        .getThrownTypes()
+                        .stream()
+                        .filter(t -> exceptions.contains(((CtTypeReference<?>) t).getSimpleName()))
+                        .collect(Collectors.toCollection(LinkedList::new));
             }
         };
     }

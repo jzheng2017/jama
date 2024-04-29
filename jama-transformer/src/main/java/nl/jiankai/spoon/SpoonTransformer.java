@@ -1,11 +1,8 @@
 package nl.jiankai.spoon;
 
-import nl.jiankai.api.GitRepository;
 import nl.jiankai.api.Project;
-import nl.jiankai.api.ProjectType;
 import nl.jiankai.api.Transformer;
 import spoon.Launcher;
-import spoon.MavenLauncher;
 import spoon.processing.Processor;
 import spoon.reflect.visitor.DefaultJavaPrettyPrinter;
 
@@ -26,9 +23,6 @@ public class SpoonTransformer implements Transformer<Processor<?>> {
         this.targetDirectory = targetDirectory;
     }
 
-
-
-
     @Override
     public void addProcessor(Processor<?> processor) {
         processors.add(processor);
@@ -44,13 +38,7 @@ public class SpoonTransformer implements Transformer<Processor<?>> {
         Launcher launcher = getLauncher(project);
         processors.forEach(launcher::addProcessor);
         launcher.setSourceOutputDirectory(new File(targetDirectory, Paths.get("src", "main", "java").toString()));
-        launcher.getEnvironment()
-                .setPrettyPrinterCreator(() -> {
-                    DefaultJavaPrettyPrinter printer = new DefaultJavaPrettyPrinter(launcher.getEnvironment());
-                    printer.setIgnoreImplicit(false);
-                    return printer;
-                });
-        launcher.getEnvironment().setNoClasspath(true); //which allows us to suppress compilation errors (no exception thrown)
+
         launcher.run();
     }
 }

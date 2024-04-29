@@ -3,10 +3,7 @@ package nl.jiankai;
 import nl.jiankai.api.*;
 import nl.jiankai.impl.CompositeProjectFactory;
 import nl.jiankai.migration.MethodMigrationPathEvaluatorImpl;
-import nl.jiankai.operators.AttributeEncapsulationOperator;
-import nl.jiankai.operators.MethodExceptionOperator;
-import nl.jiankai.operators.RenameMethodCallOperator;
-import nl.jiankai.operators.MethodCallArgumentOperator;
+import nl.jiankai.operators.*;
 import nl.jiankai.refactoringminer.RefactoringMinerImpl;
 import nl.jiankai.spoon.SpoonMethodCallTransformer;
 import nl.jiankai.spoon.SpoonStatementTransformer;
@@ -14,6 +11,7 @@ import nl.jiankai.spoon.SpoonTransformer;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import spoon.Launcher;
 import spoon.compiler.ModelBuildingException;
 import spoon.processing.Processor;
 
@@ -23,6 +21,7 @@ import java.util.Collection;
 import java.util.Set;
 
 import static nl.jiankai.compiler.JDTCompilerProblemSolver.compile;
+import static nl.jiankai.spoon.SpoonUtil.getLauncher;
 
 public class Migrator {
     private static final Logger LOGGER = LoggerFactory.getLogger(Migrator.class);
@@ -43,8 +42,10 @@ public class Migrator {
         Collection<Refactoring> refactorings = refactoringMiner.detectRefactoringBetweenCommit(dependencyProject, startCommitId, endCommitId);
         LOGGER.info("Found {} refactorings", refactorings.size());
         Transformer<Processor<?>> transformer = new SpoonTransformer(toMigrateProject, outputDirectory);
-        MethodCallTransformer<Processor<?>> methodCallTransformer = new SpoonMethodCallTransformer();
-        StatementTransformer<Processor<?>> statementTransformer = new SpoonStatementTransformer(dependencyProject);
+        Launcher launcher = getLauncher(dependencyProject);
+        launcher.buildModel();
+        MethodCallTransformer<Processor<?>> methodCallTransformer = new SpoonMethodCallTransformer(launcher.getFactory());
+        StatementTransformer<Processor<?>> statementTransformer = new SpoonStatementTransformer(launcher.getModel());
         MigrationPathEvaluator migrationPathEvaluator = new MethodMigrationPathEvaluatorImpl();
         migrationPathEvaluator
                 .evaluate(refactorings)
@@ -63,7 +64,6 @@ public class Migrator {
     }
 
     private void migrate(Migration migration, Transformer<Processor<?>> transformer, StatementTransformer<Processor<?>> statementTransformer, MethodCallTransformer<Processor<?>> methodCallTransformer) {
-
         handleAttributeMigrations(migration, transformer, statementTransformer);
         handleMethodMigrations(migration, transformer, methodCallTransformer, statementTransformer);
     }
@@ -79,9 +79,9 @@ public class Migrator {
     private static void handleMethodMigrations(Migration migration, Transformer<Processor<?>> transformer, MethodCallTransformer<Processor<?>> methodCallTransformer, StatementTransformer<Processor<?>> statementTransformer) {
         Set<RefactoringType> refactoringTypes = migration.refactorings();
 
-        if (refactoringTypes.contains(RefactoringType.METHOD_NAME)) {
-            var rename = new RenameMethodCallOperator<>(methodCallTransformer, transformer);
-            rename.migrate(migration);
+        if (refactoringTypes.stream().anyMatch(RefactoringType::isMethodReferenceRefactoring)) {
+            var referenceOperator = new ChangeMethodCallReferenceOperator<>(methodCallTransformer, transformer);
+            referenceOperator.migrate(migration);
         }
 
         if (refactoringTypes.stream().anyMatch(RefactoringType::isMethodParameterRefactoring)) {

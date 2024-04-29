@@ -42,9 +42,9 @@ public interface MethodCallTransformer<P> extends ElementHandler {
     <T> P replaceArgument(String methodSignature, int position, T value);
 
     /**
-     * Change the reference of the method calls matching the provided signature (e.g. org.example.Class#function to org.exampleV2.Class#function)
+     * Change the reference of the method calls matching the provided signature (e.g. org.example.Class#method to org.example.NewClass#newMethod)
      * @param methodSignature the signature of the original method that is being called
-     * @param newPath the path to the new function (e.g. org.exampleV2.Class)
+     * @param newSignature the path to the new function (e.g. org.example.NewClass#newMethod)
      */
-    P changeReference(String methodSignature, String newPath);
+    P changeReference(String methodSignature, String newSignature);
 }

@@ -1,9 +1,6 @@
 package nl.jiankai.api;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public record Migration(ApiMapping mapping, Migration next) {
     public ApiMapping end() {
@@ -26,6 +23,37 @@ public record Migration(ApiMapping mapping, Migration next) {
         }
 
         return refactoringTypes;
+    }
+
+    public boolean hasRefactorings(Set<RefactoringType> refactorings) {
+        return refactorings().containsAll(refactorings);
+    }
+
+    public boolean hasAnyRefactoring(Set<RefactoringType> refactorings) {
+        return refactorings().stream().anyMatch(refactorings::contains);
+    }
+
+    public boolean hasRefactoring(RefactoringType refactoringType) {
+        return refactorings().contains(refactoringType);
+    }
+
+    /**
+     * Returns the last intermediate migration of mapping A to mapping B of a specific refactoring type
+     * @param refactoringType the refactoring type to find
+     * @return the last found migration
+     */
+    public Optional<Migration> lastOf(RefactoringType refactoringType) {
+        Migration current = this;
+        Optional<Migration> lastKnown = Optional.empty();
+
+        while (current != null) {
+            if (current.mapping.refactoringType() == refactoringType) {
+                lastKnown = Optional.of(current);
+            }
+            current = current.next;
+        }
+
+        return lastKnown;
     }
 
     public List<Object> getContext(String key) {

@@ -17,6 +17,7 @@ public enum RefactoringType {
     MOVE_RENAME_CLASS,
     REORDER_PARAMETER,
     ADD_THROWN_EXCEPTION,
+    MOVE_METHOD,
     UNKNOWN;
 
     public boolean isMethodRefactoring() {
@@ -28,9 +29,18 @@ public enum RefactoringType {
                                 ADD_PARAMETER,
                                 REMOVE_PARAMETER,
                                 REORDER_PARAMETER,
-                                RENAME_PARAMETER
+                                RENAME_PARAMETER,
+                                MOVE_METHOD
                         )
                 .contains(this);
+    }
+
+    public boolean isMethodReferenceRefactoring() {
+        return Set.of(
+                MOVE_CLASS,
+                METHOD_NAME,
+                MOVE_METHOD
+        ).contains(this);
     }
 
     public boolean isMethodParameterRefactoring() {
@@ -59,7 +69,8 @@ public enum RefactoringType {
                 PACKAGE_NAME,
                 MOVE_RENAME_CLASS,
                 REORDER_PARAMETER,
-                ADD_THROWN_EXCEPTION).contains(this);
+                ADD_THROWN_EXCEPTION,
+                MOVE_METHOD).contains(this);
     }
 
     public boolean isAttributeRefactoring() {

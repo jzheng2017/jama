@@ -5,7 +5,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import spoon.processing.AbstractProcessor;
 import spoon.processing.Processor;
+import spoon.reflect.code.CtExpression;
 import spoon.reflect.code.CtInvocation;
+import spoon.reflect.code.CtTypeAccess;
+import spoon.reflect.factory.Factory;
+import spoon.reflect.reference.CtTypeReference;
 
 import java.util.Collections;
 
@@ -13,7 +17,11 @@ import static nl.jiankai.spoon.SpoonUtil.executeIfMethodCallMatches;
 
 public class SpoonMethodCallTransformer implements MethodCallTransformer<Processor<?>> {
     private static final Logger LOGGER = LoggerFactory.getLogger(SpoonMethodCallTransformer.class);
+    private final Factory dependencyFactory;
 
+    public SpoonMethodCallTransformer(Factory dependencyFactory) {
+        this.dependencyFactory = dependencyFactory;
+    }
 
     @Override
     public Processor<?> rename(String originalSignature, String newName) {
@@ -21,7 +29,9 @@ public class SpoonMethodCallTransformer implements MethodCallTransformer<Process
         return new AbstractProcessor<CtInvocation<?>>() {
             @Override
             public void process(CtInvocation<?> methodCall) {
-                executeIfMethodCallMatches(methodCall, originalSignature, () -> methodCall.getExecutable().setSimpleName(newName));
+                executeIfMethodCallMatches(methodCall, originalSignature, () -> {
+                    methodCall.getExecutable().setSimpleName(newName);
+                });
             }
         };
     }
@@ -86,24 +96,26 @@ public class SpoonMethodCallTransformer implements MethodCallTransformer<Process
 
 
     @Override
-    public Processor<?> changeReference(String methodSignature, String newPath) {
-//        execute(new AbstractProcessor<CtInvocation<?>>() {
-//            @Override
-//            public void process(CtInvocation<?> methodCall) {
-//                executeIfMethodMatches(methodCall, originalFullyQualifiedName, () -> methodCall
-//                        .getExecutable()
-//                        .setDeclaringType(
-//                                methodCall
-//                                        .getFactory()
-//                                        .Type()
-//                                        .get(newPath)
-//                                        .getReference()
-//                        )
-//                );
-//            }
-//        });
-        // TODO
-        return null;
+    public Processor<?> changeReference(String methodSignature, String newSignature) {
+        LOGGER.info("Changing reference of all method calls with reference '{}' to '{}'", methodSignature, newSignature);
+
+        return new AbstractProcessor<CtInvocation<?>>() {
+            @Override
+            public void process(CtInvocation<?> methodCall) {
+                executeIfMethodCallMatches(methodCall, methodSignature, () -> {
+                            CtTypeReference<?> ref =
+                                    dependencyFactory
+                                            .Type()
+                                            .get(newSignature.substring(0, newSignature.lastIndexOf("#")))
+                                            .getReference();
+
+                            methodCall.getExecutable().setDeclaringType(ref);
+                            CtTypeAccess target = (CtTypeAccess<?>) methodCall.getTarget();
+                            target.setAccessedType(ref);
+                        }
+                );
+            }
+        };
     }
 
 
