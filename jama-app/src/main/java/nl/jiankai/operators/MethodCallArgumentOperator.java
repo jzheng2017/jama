@@ -73,11 +73,15 @@ public class MethodCallArgumentOperator<P> implements MigrationOperator {
 
         for (String param : added) {
             int index = after.indexOf(param);
-            transformer.addProcessor(methodCallTransformer.addArgument(currentSignature, index, getDefaultValue(afterParameters.get(index).type())));
-            current.add(index, param);
+            if (index >= current.size()) { // possible if param added during same commit
+                current.add(param);
+                transformer.addProcessor(methodCallTransformer.addArgument(currentSignature, -1, getDefaultValue(afterParameters.get(index).type())));
+            } else {
+                current.add(index, param);
+                transformer.addProcessor(methodCallTransformer.addArgument(currentSignature, index, getDefaultValue(afterParameters.get(index).type())));
+            }
         }
     }
-
 
 
     private void removeArguments(Set<String> oldSet, Set<String> newSet, List<String> current, String currentSignature) {
@@ -147,13 +151,20 @@ public class MethodCallArgumentOperator<P> implements MigrationOperator {
 
         while (current != null) {
             if (current.mapping().refactoringType() == RefactoringType.RENAME_PARAMETER) {
-                names.put((String) current.mapping().context().get("original"), (String) current.mapping().context().get("renamed"));
-            }
+                String original = (String) current.mapping().context().get("original");
+                String renamed = (String) current.mapping().context().get("renamed");
 
+                if (names.containsKey(renamed)) {
+                    names.remove(renamed);
+                } else {
+                    names.put(original, renamed);
+                }
+
+            }
             current = current.next();
         }
-
         return names;
+
     }
 
     private String getMostRecentName(String name, Map<String, String> mapping) {

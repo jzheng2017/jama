@@ -32,6 +32,7 @@ public class Migrator {
     }
 
     public void migrate(GitRepository toMigrateProject, GitRepository dependencyProject, String startCommitId, String endCommitId, String newVersion) {
+        long start = System.currentTimeMillis();
         try {
             FileUtils.deleteDirectory(outputDirectory);
             FileUtils.copyDirectory(toMigrateProject.getLocalPath(), outputDirectory);
@@ -44,14 +45,17 @@ public class Migrator {
         Transformer<Processor<?>> transformer = new SpoonTransformer(toMigrateProject, outputDirectory);
         Launcher launcher = getLauncher(dependencyProject);
         launcher.buildModel();
-        MethodCallTransformer<Processor<?>> methodCallTransformer = new SpoonMethodCallTransformer(launcher.getFactory());
-        StatementTransformer<Processor<?>> statementTransformer = new SpoonStatementTransformer(launcher.getModel());
+        LOGGER.info("{} build sucessfully", dependencyProject.getId());
+        var tracker = new ElementTransformationTracker();
+        MethodCallTransformer<Processor<?>> methodCallTransformer = new SpoonMethodCallTransformer(launcher.getFactory(), tracker);
+        StatementTransformer<Processor<?>> statementTransformer = new SpoonStatementTransformer(launcher.getModel(), tracker);
         MigrationPathEvaluator migrationPathEvaluator = new MethodMigrationPathEvaluatorImpl();
         migrationPathEvaluator
                 .evaluate(refactorings)
                 .forEach(migration -> migrate(migration, transformer, statementTransformer, methodCallTransformer));
         try {
             transformer.run();
+            tracker.report();
         } catch (ModelBuildingException e) {
             LOGGER.warn("The project has errors", e);
         }
@@ -61,6 +65,8 @@ public class Migrator {
         migratedProject.upgradeDependency(new Dependency(coord.groupId(), coord.artifactId(), newVersion));
         migratedProject.install();
         compile(migratedProject, compilationTransformer);
+        long end = System.currentTimeMillis();
+        LOGGER.info("It took {} ms to migrate {}", end - start, toMigrateProject.getId());
     }
 
     private void migrate(Migration migration, Transformer<Processor<?>> transformer, StatementTransformer<Processor<?>> statementTransformer, MethodCallTransformer<Processor<?>> methodCallTransformer) {

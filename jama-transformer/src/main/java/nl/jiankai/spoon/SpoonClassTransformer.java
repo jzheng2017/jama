@@ -1,6 +1,8 @@
 package nl.jiankai.spoon;
 
 import nl.jiankai.api.ClassTransformer;
+import nl.jiankai.api.ElementTransformationTracker;
+import nl.jiankai.api.Transformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import spoon.processing.AbstractProcessor;
@@ -8,13 +10,17 @@ import spoon.processing.Processor;
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.ModifierKind;
-import spoon.reflect.reference.CtTypeReference;
 
 import java.util.Collection;
 import java.util.Optional;
 
 public class SpoonClassTransformer implements ClassTransformer<Processor<CtClass<?>>> {
     private static final Logger LOGGER = LoggerFactory.getLogger(SpoonClassTransformer.class);
+    private final ElementTransformationTracker tracker;
+
+    public SpoonClassTransformer(ElementTransformationTracker tracker) {
+        this.tracker = tracker;
+    }
 
     @Override
     public Processor<CtClass<?>> implementMethod(String fullyQualifiedClass, String methodSignature) {
@@ -29,6 +35,7 @@ public class SpoonClassTransformer implements ClassTransformer<Processor<CtClass
                         clone.setBody(getFactory().createCtThrow("new UnsupportedOperationException(\"Implement this method\")"));
                         LOGGER.info("Overriding/implementing method {}", methodSignature);
                         ctClass.addMethod(clone);
+                        tracker.count(new Transformation("Implement method", methodSignature));
                     });
                 });
             }
@@ -55,6 +62,7 @@ public class SpoonClassTransformer implements ClassTransformer<Processor<CtClass
                     foundMethod.ifPresent(method -> {
                         LOGGER.info("Removing method {}", methodSignature);
                         ctClass.removeMethod(method);
+                        tracker.count(new Transformation("Remove method", methodSignature));
                     });
                 });
             }
@@ -69,9 +77,9 @@ public class SpoonClassTransformer implements ClassTransformer<Processor<CtClass
                 executeIfClassMatches(ctClass, fullyQualifiedClass, () -> {
                     if (ctClass.getSuperclass() != null && ctClass.getSuperclass().getSimpleName().equals(parentClass)) {
                         LOGGER.info("Removing super class '{}' from class '{}'", parentClass, fullyQualifiedClass);
+                        tracker.count(new Transformation("Removing super class", fullyQualifiedClass));
                         ctClass.setSuperclass(null);
                     } else {
-
                         ctClass
                                 .getSuperInterfaces()
                                 .stream()
@@ -80,6 +88,7 @@ public class SpoonClassTransformer implements ClassTransformer<Processor<CtClass
                                 .ifPresent(ref -> {
                                     LOGGER.info("Removing parent interface '{}' from class '{}'", parentClass, fullyQualifiedClass);
                                     ctClass.removeSuperInterface(ref);
+                                    tracker.count(new Transformation("Removing parent interface", fullyQualifiedClass));
                                 });
                     }
                 });

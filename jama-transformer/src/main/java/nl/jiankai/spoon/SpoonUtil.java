@@ -11,6 +11,7 @@ import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.visitor.DefaultJavaPrettyPrinter;
+import spoon.support.sniper.SniperJavaPrettyPrinter;
 
 import java.util.List;
 
@@ -27,7 +28,7 @@ public class SpoonUtil {
         launcher.getEnvironment().setAutoImports(true);
         launcher.getEnvironment()
                 .setPrettyPrinterCreator(() -> {
-                    DefaultJavaPrettyPrinter printer = new DefaultJavaPrettyPrinter(launcher.getEnvironment());
+                    DefaultJavaPrettyPrinter printer = new SniperJavaPrettyPrinter(launcher.getEnvironment());
                     printer.setIgnoreImplicit(false);
                     return printer;
                 });
