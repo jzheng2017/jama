@@ -1,7 +1,6 @@
 package nl.jiankai;
 
 import nl.jiankai.api.*;
-import nl.jiankai.impl.CompositeProjectFactory;
 import nl.jiankai.migration.MethodMigrationPathEvaluatorImpl;
 import nl.jiankai.operators.*;
 import nl.jiankai.refactoringminer.RefactoringMinerImpl;
@@ -39,12 +38,8 @@ public class Migrator {
 
     public void migrate(GitRepository toMigrateProject, GitRepository dependencyProject, String startCommitId, String endCommitId, String newVersion) {
         long start = System.currentTimeMillis();
-        try {
-            FileUtils.deleteDirectory(outputDirectory);
-            FileUtils.copyDirectory(toMigrateProject.getLocalPath(), outputDirectory);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        setup(toMigrateProject);
+
         RefactoringMiner refactoringMiner = new RefactoringMinerImpl();
         Collection<Refactoring> refactorings = refactoringMiner.detectRefactoringBetweenCommit(dependencyProject, startCommitId, endCommitId);
         LOGGER.info("Found {} refactorings", refactorings.size());
@@ -58,11 +53,12 @@ public class Migrator {
         var methodCallTransformationProvider = new SpoonTransformationProvider<CtInvocation>();
         var fieldAccessTransformationProvider = new SpoonTransformationProvider<CtFieldAccess>();
         var classTransformationProvider = new SpoonTransformationProvider<CtClass>();
-        ElementHandler<Processor<?>> methodCallTransformer = new SpoonMethodCallTransformer(methodCallTransformationProvider);
-        ElementHandler<Processor<?>> statementTransformer = new FieldAccessTransformer(fieldAccessTransformationProvider);
-        ElementHandler<Processor<?>> classTransformer = new SpoonClassTransformer(classTransformationProvider);
+        var methodCallTransformer = new SpoonMethodCallTransformer(methodCallTransformationProvider);
+        var statementTransformer = new FieldAccessTransformer(fieldAccessTransformationProvider);
+        var classTransformer = new SpoonClassTransformer(classTransformationProvider);
 
-        MigrationPathEvaluator migrationPathEvaluator = new MethodMigrationPathEvaluatorImpl();
+        var migrationPathEvaluator = new MethodMigrationPathEvaluatorImpl();
+
         migrationPathEvaluator
                 .evaluate(refactorings)
                 .forEach(migration -> migrate(migration, methodCallTransformationProvider, fieldAccessTransformationProvider, tracker, dependencyLauncher.getFactory()));
@@ -77,9 +73,18 @@ public class Migrator {
             LOGGER.warn("The project has errors", e);
         }
 
-        compile(outputDirectory, dependencyProject, newVersion);
         long end = System.currentTimeMillis();
-        LOGGER.info("It took {} ms to migrate {}", end - start, toMigrateProject.getId());
+        LOGGER.info("It took {} seconds to migrate {}", (end - start)/1000, toMigrateProject.getId());
+        compile(outputDirectory, dependencyProject, newVersion);
+    }
+
+    private void setup(GitRepository toMigrateProject) {
+        try {
+            FileUtils.deleteDirectory(outputDirectory);
+            FileUtils.copyDirectory(toMigrateProject.getLocalPath(), outputDirectory);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void migrate(Migration migration, TransformationProvider<CtInvocation> methodCallTransformationProvider, TransformationProvider<CtFieldAccess> fieldAccessTransformationProvider, ElementTransformationTracker tracker, Factory dependencyFactory) {

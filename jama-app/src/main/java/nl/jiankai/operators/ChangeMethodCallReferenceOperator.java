@@ -3,6 +3,7 @@ package nl.jiankai.operators;
 import nl.jiankai.ElementTransformationTracker;
 import nl.jiankai.api.*;
 import nl.jiankai.spoon.transformations.method.ChangeMethodCallReferenceTransformation;
+import nl.jiankai.spoon.transformations.method.MethodCallRenameTransformation;
 import spoon.reflect.code.CtInvocation;
 import spoon.reflect.factory.Factory;
 
@@ -25,6 +26,11 @@ public class ChangeMethodCallReferenceOperator implements MigrationOperator {
 
         if (refactoringTypes.contains(RefactoringType.MOVE_METHOD)) {
             transformationProvider.produce(originalSignature, new ChangeMethodCallReferenceTransformation(tracker, originalSignature, dependencyFactory));
+        }
+
+        if (refactoringTypes.contains(RefactoringType.METHOD_NAME)) {
+            var rename = new RenameMethodCallOperator(transformationProvider, tracker);
+            rename.migrate(migration);
         }
     }
 }

@@ -1,6 +1,5 @@
 package nl.jiankai.spoon.transformations;
 
-import nl.jiankai.api.Id;
 import nl.jiankai.api.Transformation;
 import nl.jiankai.api.TransformationProvider;
 import spoon.reflect.declaration.CtElement;
@@ -17,8 +16,7 @@ public class SpoonTransformationProvider<E extends CtElement> implements Transfo
             return Stream.empty();
         }
 
-        Queue<Transformation<E>> transformations = transformationsPerSignature.remove(id);
-        return transformations.stream();
+        return transformationsPerSignature.get(id).stream();
     }
 
     @Override

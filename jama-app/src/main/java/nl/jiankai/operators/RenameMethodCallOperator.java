@@ -8,6 +8,7 @@ import spoon.reflect.code.CtInvocation;
 public class RenameMethodCallOperator implements MigrationOperator {
     private final TransformationProvider<CtInvocation> transformationProvider;
     private final ElementTransformationTracker tracker;
+
     public RenameMethodCallOperator(TransformationProvider<CtInvocation> transformationProvider, ElementTransformationTracker tracker) {
         this.transformationProvider = transformationProvider;
         this.tracker = tracker;

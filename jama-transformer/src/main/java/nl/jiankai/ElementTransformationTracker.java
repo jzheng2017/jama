@@ -16,9 +16,13 @@ public class ElementTransformationTracker {
     }
 
     public void report() {
-        LOGGER.info("============ ALL TRANSFORMED ELEMENTS ============");
-        elementCounter.forEach((transformation, count) -> LOGGER.info("({}, {}): {}", transformation.element(), transformation.transformation(), count));
-        LOGGER.info("============ END ============");
-        elementCounter.clear();
+        if (!elementCounter.isEmpty()) {
+            LOGGER.info("============ ALL TRANSFORMED ELEMENTS ============");
+            elementCounter.forEach((transformation, count) -> LOGGER.info("({}, {}): {}", transformation.element(), transformation.transformation(), count));
+            LOGGER.info("===================== END =====================");
+            elementCounter.clear();
+        } else {
+            LOGGER.info("No elements were transformed");
+        }
     }
 }
