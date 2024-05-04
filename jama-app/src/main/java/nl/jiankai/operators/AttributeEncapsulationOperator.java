@@ -1,22 +1,25 @@
 package nl.jiankai.operators;
 
+import nl.jiankai.ElementTransformationTracker;
 import nl.jiankai.api.Migration;
-import nl.jiankai.api.StatementTransformer;
-import nl.jiankai.api.Transformer;
+import nl.jiankai.api.TransformationProvider;
+import nl.jiankai.spoon.transformations.clazz.EncapsulateAttributeTransformation;
+import spoon.reflect.code.CtFieldAccess;
 
-public class AttributeEncapsulationOperator<P> implements MigrationOperator {
+public class AttributeEncapsulationOperator implements MigrationOperator {
+    private TransformationProvider<CtFieldAccess> transformationProvider;
+    private ElementTransformationTracker tracker;
 
-    private final StatementTransformer<P> statementTransformer;
-    private final Transformer<P> transformer;
-
-    public AttributeEncapsulationOperator(StatementTransformer<P> statementTransformer, Transformer<P> transformer) {
-        this.statementTransformer = statementTransformer;
-        this.transformer = transformer;
+    public AttributeEncapsulationOperator(TransformationProvider<CtFieldAccess> transformationProvider, ElementTransformationTracker tracker) {
+        this.transformationProvider = transformationProvider;
+        this.tracker = tracker;
     }
 
     @Override
     public void migrate(Migration migration) {
         String getterSignature = migration.mapping().context().get("getter").toString();
-        transformer.addProcessor(statementTransformer.encapsulateAttribute(migration.mapping().original().signature(),getterSignature));
+        String attributeSignature = migration.mapping().original().signature();
+        transformationProvider.produce(attributeSignature, new EncapsulateAttributeTransformation(tracker, attributeSignature, getterSignature));
+//        transformer.addProcessor(statementTransformer.encapsulateAttribute(migration.mapping().original().signature(),getterSignature));
     }
 }

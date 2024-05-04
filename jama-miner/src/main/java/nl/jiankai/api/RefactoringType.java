@@ -55,6 +55,17 @@ public enum RefactoringType {
                 .contains(this);
     }
 
+    public static Set<RefactoringType> methodParameterRefactoring() {
+        return Set.of
+                (
+                        CHANGE_PARAMETER_TYPE,
+                        ADD_PARAMETER,
+                        REMOVE_PARAMETER,
+                        REORDER_PARAMETER,
+                        RENAME_PARAMETER
+                );
+    }
+
     public boolean isBreaking() {
         return Set.of(METHOD_NAME,
                 CHANGE_PARAMETER_TYPE,

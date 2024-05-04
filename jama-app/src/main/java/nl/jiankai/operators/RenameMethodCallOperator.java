@@ -1,26 +1,23 @@
 package nl.jiankai.operators;
 
-import nl.jiankai.api.ApiMapping;
-import nl.jiankai.api.MethodCallTransformer;
-import nl.jiankai.api.Migration;
-import nl.jiankai.api.Transformer;
+import nl.jiankai.ElementTransformationTracker;
+import nl.jiankai.api.*;
+import nl.jiankai.spoon.transformations.method.MethodCallRenameTransformation;
+import spoon.reflect.code.CtInvocation;
 
-import java.util.Map;
-
-public class RenameMethodCallOperator<P> implements MigrationOperator {
-    private final MethodCallTransformer<P> methodCallTransformer;
-    private final Transformer<P> transformer;
-
-    public RenameMethodCallOperator(MethodCallTransformer<P> methodCallTransformer, Transformer<P> transformer) {
-        this.methodCallTransformer = methodCallTransformer;
-        this.transformer = transformer;
+public class RenameMethodCallOperator implements MigrationOperator {
+    private final TransformationProvider<CtInvocation> transformationProvider;
+    private final ElementTransformationTracker tracker;
+    public RenameMethodCallOperator(TransformationProvider<CtInvocation> transformationProvider, ElementTransformationTracker tracker) {
+        this.transformationProvider = transformationProvider;
+        this.tracker = tracker;
     }
 
     @Override
     public void migrate(Migration migration) {
-        ApiMapping start = migration.mapping();
-        ApiMapping end = migration.end();
+        String originalSignature = migration.mapping().original().signature();
+        String finalName = migration.end().target().name();
 
-         transformer.addProcessor(methodCallTransformer.rename(start.original().signature(), end.target().name()));
+        transformationProvider.produce(originalSignature, new MethodCallRenameTransformation(tracker, finalName, originalSignature));
     }
 }

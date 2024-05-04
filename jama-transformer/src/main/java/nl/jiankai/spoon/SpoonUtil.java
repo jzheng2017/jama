@@ -6,7 +6,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import spoon.Launcher;
 import spoon.MavenLauncher;
+import spoon.reflect.code.CtFieldAccess;
 import spoon.reflect.code.CtInvocation;
+import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.reference.CtTypeReference;
@@ -21,7 +23,7 @@ public class SpoonUtil {
     public static Launcher getLauncher(Project project) {
         Launcher launcher = switch (project.getProjectType()) {
             case ProjectType.MAVEN ->
-                    new MavenLauncher(project.getLocalPath().getAbsolutePath(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE);
+                    new MavenLauncher(project.getLocalPath().getAbsolutePath(), MavenLauncher.SOURCE_TYPE.APP_SOURCE);
             case UNKNOWN -> throw new UnsupportedOperationException("Unsupported project type");
         };
 
@@ -87,5 +89,13 @@ public class SpoonUtil {
 
     private static CtTypeReference<?> getClass(CtInvocation<?> methodCall) {
         return methodCall.getExecutable().getDeclaringType();
+    }
+
+    public static String getSignature(CtClass<?> ctClass) {
+        return ctClass.getReference().getQualifiedName();
+    }
+
+    public static String getSignature(CtFieldAccess fieldAccess) {
+        return fieldAccess.getVariable().getQualifiedName();
     }
 }

@@ -1,5 +1,6 @@
-package nl.jiankai.api;
+package nl.jiankai;
 
+import nl.jiankai.api.TransformationEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -8,10 +9,10 @@ import java.util.Map;
 
 public class ElementTransformationTracker {
     private final Logger LOGGER = LoggerFactory.getLogger(ElementTransformationTracker.class);
-    private final Map<Transformation, Integer> elementCounter = new HashMap<>();
+    private final Map<TransformationEvent, Integer> elementCounter = new HashMap<>();
 
-    public void count(Transformation transformation) {
-        elementCounter.merge(transformation, 1, Integer::sum);
+    public void count(TransformationEvent transformationEvent) {
+        elementCounter.merge(transformationEvent, 1, Integer::sum);
     }
 
     public void report() {

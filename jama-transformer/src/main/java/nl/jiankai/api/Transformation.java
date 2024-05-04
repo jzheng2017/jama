@@ -1,4 +1,5 @@
 package nl.jiankai.api;
 
-public record Transformation(String transformation, String element) {
+public interface Transformation<E> {
+    void apply(E element);
 }

@@ -1,24 +1,28 @@
 package nl.jiankai.operators;
 
+import nl.jiankai.ElementTransformationTracker;
 import nl.jiankai.api.*;
+import nl.jiankai.spoon.transformations.method.AddMethodCallArgumentTransformation;
+import nl.jiankai.spoon.transformations.method.RemoveMethodCallArgumentTransformation;
+import nl.jiankai.spoon.transformations.method.ReplaceMethodCallArgumentTransformation;
+import nl.jiankai.spoon.transformations.method.SwapMethodCallArgumentsTransformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import spoon.reflect.code.CtInvocation;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.*;
 import java.util.stream.Collectors;
 
 import static nl.jiankai.util.TypeUtil.getDefaultValue;
 
-public class MethodCallArgumentOperator<P> implements MigrationOperator {
+public class MethodCallArgumentOperator implements MigrationOperator {
     private static final Logger LOGGER = LoggerFactory.getLogger(MethodCallArgumentOperator.class);
-    private final MethodCallTransformer<P> methodCallTransformer;
-    private final Transformer<P> transformer;
+    private final TransformationProvider<CtInvocation> transformationProvider;
+    private final ElementTransformationTracker tracker;
 
-    public MethodCallArgumentOperator(MethodCallTransformer<P> methodCallTransformer, Transformer<P> transformer) {
-        this.methodCallTransformer = methodCallTransformer;
-        this.transformer = transformer;
+    public MethodCallArgumentOperator(TransformationProvider<CtInvocation> transformationProvider, ElementTransformationTracker tracker) {
+        this.transformationProvider = transformationProvider;
+        this.tracker = tracker;
     }
 
     @Override
@@ -44,13 +48,13 @@ public class MethodCallArgumentOperator<P> implements MigrationOperator {
         updateArgumentTypes(afterParameters, changedVariables, currentSignature);
     }
 
-    private void updateArgumentTypes(List<Variable> after, Map<String, String> changedVariables, String currentSignature) {
+    private void updateArgumentTypes(List<Variable> after, Map<String, String> changedVariables, String originalSignature) {
         List<String> afterNames = after.stream().map(Variable::name).toList();
         changedVariables = changedVariables.entrySet().stream().filter(entry -> !isBoxed(entry.getKey(), entry.getValue())).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         for (Map.Entry<String, String> variable : changedVariables.entrySet()) {
             int index = afterNames.indexOf(variable.getValue());
             if (index >= 0) {
-                transformer.addProcessor(methodCallTransformer.replaceArgument(currentSignature, index, getDefaultValue(after.get(index).type())));
+                transformationProvider.produce(originalSignature, new ReplaceMethodCallArgumentTransformation<>(tracker, originalSignature, index, getDefaultValue(after.get(index).type())));
             }
         }
     }
@@ -65,7 +69,7 @@ public class MethodCallArgumentOperator<P> implements MigrationOperator {
                 Set.of("char", "Character").containsAll(List.of(originalType, newType));
     }
 
-    private void addArguments(Set<String> newSet, Set<String> oldSet, List<Variable> afterParameters, String currentSignature, List<String> current) {
+    private <T> void addArguments(Set<String> newSet, Set<String> oldSet, List<Variable> afterParameters, String currentSignature, List<String> current) {
         Set<String> added = new HashSet<>(newSet);
         added.removeAll(oldSet);
         List<String> after = afterParameters.stream().map(Variable::name).toList();
@@ -75,10 +79,10 @@ public class MethodCallArgumentOperator<P> implements MigrationOperator {
             int index = after.indexOf(param);
             if (index >= current.size()) { // possible if param added during same commit
                 current.add(param);
-                transformer.addProcessor(methodCallTransformer.addArgument(currentSignature, -1, getDefaultValue(afterParameters.get(index).type())));
+                transformationProvider.produce(currentSignature, new AddMethodCallArgumentTransformation<>(tracker, getDefaultValue(afterParameters.get(index).type()), currentSignature, -1));
             } else {
                 current.add(index, param);
-                transformer.addProcessor(methodCallTransformer.addArgument(currentSignature, index, getDefaultValue(afterParameters.get(index).type())));
+                transformationProvider.produce(currentSignature, new AddMethodCallArgumentTransformation<>(tracker, getDefaultValue(afterParameters.get(index).type()), currentSignature, index));
             }
         }
     }
@@ -90,7 +94,7 @@ public class MethodCallArgumentOperator<P> implements MigrationOperator {
 
         for (String param : removed) {
             int index = current.indexOf(param);
-            transformer.addProcessor(methodCallTransformer.removeArgument(currentSignature, index));
+            transformationProvider.produce(currentSignature, new RemoveMethodCallArgumentTransformation(tracker, currentSignature, index));
             current.remove(index);
         }
     }
@@ -110,7 +114,7 @@ public class MethodCallArgumentOperator<P> implements MigrationOperator {
             int newIndex = after.indexOf(param);
             if (oldIndex != newIndex) {
                 Collections.swap(current, oldIndex, newIndex);
-                transformer.addProcessor(methodCallTransformer.swapArguments(currentSignature, oldIndex, newIndex));
+                transformationProvider.produce(currentSignature, new SwapMethodCallArgumentsTransformation(tracker, currentSignature, oldIndex, newIndex));
             }
         }
     }

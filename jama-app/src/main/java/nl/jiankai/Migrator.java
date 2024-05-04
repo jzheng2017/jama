@@ -5,15 +5,21 @@ import nl.jiankai.impl.CompositeProjectFactory;
 import nl.jiankai.migration.MethodMigrationPathEvaluatorImpl;
 import nl.jiankai.operators.*;
 import nl.jiankai.refactoringminer.RefactoringMinerImpl;
+import nl.jiankai.spoon.SpoonClassTransformer;
 import nl.jiankai.spoon.SpoonMethodCallTransformer;
-import nl.jiankai.spoon.SpoonStatementTransformer;
+import nl.jiankai.spoon.FieldAccessTransformer;
 import nl.jiankai.spoon.SpoonTransformer;
+import nl.jiankai.spoon.transformations.SpoonTransformationProvider;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import spoon.Launcher;
 import spoon.compiler.ModelBuildingException;
 import spoon.processing.Processor;
+import spoon.reflect.code.CtFieldAccess;
+import spoon.reflect.code.CtInvocation;
+import spoon.reflect.declaration.CtClass;
+import spoon.reflect.factory.Factory;
 
 import java.io.File;
 import java.io.IOException;
@@ -42,61 +48,68 @@ public class Migrator {
         RefactoringMiner refactoringMiner = new RefactoringMinerImpl();
         Collection<Refactoring> refactorings = refactoringMiner.detectRefactoringBetweenCommit(dependencyProject, startCommitId, endCommitId);
         LOGGER.info("Found {} refactorings", refactorings.size());
+
         Transformer<Processor<?>> transformer = new SpoonTransformer(toMigrateProject, outputDirectory);
-        Launcher launcher = getLauncher(dependencyProject);
-        launcher.buildModel();
+        Launcher dependencyLauncher = getLauncher(dependencyProject);
+        dependencyLauncher.buildModel();
         LOGGER.info("{} build sucessfully", dependencyProject.getId());
+
         var tracker = new ElementTransformationTracker();
-        MethodCallTransformer<Processor<?>> methodCallTransformer = new SpoonMethodCallTransformer(launcher.getFactory(), tracker);
-        StatementTransformer<Processor<?>> statementTransformer = new SpoonStatementTransformer(launcher.getModel(), tracker);
+        var methodCallTransformationProvider = new SpoonTransformationProvider<CtInvocation>();
+        var fieldAccessTransformationProvider = new SpoonTransformationProvider<CtFieldAccess>();
+        var classTransformationProvider = new SpoonTransformationProvider<CtClass>();
+        ElementHandler<Processor<?>> methodCallTransformer = new SpoonMethodCallTransformer(methodCallTransformationProvider);
+        ElementHandler<Processor<?>> statementTransformer = new FieldAccessTransformer(fieldAccessTransformationProvider);
+        ElementHandler<Processor<?>> classTransformer = new SpoonClassTransformer(classTransformationProvider);
+
         MigrationPathEvaluator migrationPathEvaluator = new MethodMigrationPathEvaluatorImpl();
         migrationPathEvaluator
                 .evaluate(refactorings)
-                .forEach(migration -> migrate(migration, transformer, statementTransformer, methodCallTransformer));
+                .forEach(migration -> migrate(migration, methodCallTransformationProvider, fieldAccessTransformationProvider, tracker, dependencyLauncher.getFactory()));
+        transformer.addProcessor(methodCallTransformer.handle());
+        transformer.addProcessor(statementTransformer.handle());
+        transformer.addProcessor(classTransformer.handle());
+
         try {
             transformer.run();
             tracker.report();
         } catch (ModelBuildingException e) {
             LOGGER.warn("The project has errors", e);
         }
-        ProjectCoordinate coord = dependencyProject.getProjectVersion().coordinate();
-        Project migratedProject = new CompositeProjectFactory().createProject(outputDirectory);
-        Transformer<Processor<?>> compilationTransformer = new SpoonTransformer(migratedProject, outputDirectory);
-        migratedProject.upgradeDependency(new Dependency(coord.groupId(), coord.artifactId(), newVersion));
-        migratedProject.install();
-        compile(migratedProject, compilationTransformer);
+
+        compile(outputDirectory, dependencyProject, newVersion);
         long end = System.currentTimeMillis();
         LOGGER.info("It took {} ms to migrate {}", end - start, toMigrateProject.getId());
     }
 
-    private void migrate(Migration migration, Transformer<Processor<?>> transformer, StatementTransformer<Processor<?>> statementTransformer, MethodCallTransformer<Processor<?>> methodCallTransformer) {
-        handleAttributeMigrations(migration, transformer, statementTransformer);
-        handleMethodMigrations(migration, transformer, methodCallTransformer, statementTransformer);
+    private void migrate(Migration migration, TransformationProvider<CtInvocation> methodCallTransformationProvider, TransformationProvider<CtFieldAccess> fieldAccessTransformationProvider, ElementTransformationTracker tracker, Factory dependencyFactory) {
+        handleAttributeMigrations(migration, fieldAccessTransformationProvider, tracker);
+        handleMethodMigrations(migration, methodCallTransformationProvider, tracker, dependencyFactory);
     }
 
-    private static void handleAttributeMigrations(Migration migration, Transformer<Processor<?>> transformer, StatementTransformer<Processor<?>> statementTransformer) {
+    private static void handleAttributeMigrations(Migration migration, TransformationProvider<CtFieldAccess> fieldAccessTransformationProvider, ElementTransformationTracker tracker) {
         Set<RefactoringType> refactoringTypes = migration.refactorings();
         if (refactoringTypes.stream().anyMatch(RefactoringType::isAttributeRefactoring)) {
-            var encapsulate = new AttributeEncapsulationOperator<>(statementTransformer, transformer);
+            var encapsulate = new AttributeEncapsulationOperator(fieldAccessTransformationProvider, tracker);
             encapsulate.migrate(migration);
         }
     }
 
-    private static void handleMethodMigrations(Migration migration, Transformer<Processor<?>> transformer, MethodCallTransformer<Processor<?>> methodCallTransformer, StatementTransformer<Processor<?>> statementTransformer) {
+    private static void handleMethodMigrations(Migration migration, TransformationProvider<CtInvocation> transformationProvider, ElementTransformationTracker tracker, Factory dependencyFactory) {
         Set<RefactoringType> refactoringTypes = migration.refactorings();
 
-        if (refactoringTypes.stream().anyMatch(RefactoringType::isMethodReferenceRefactoring)) {
-            var referenceOperator = new ChangeMethodCallReferenceOperator<>(methodCallTransformer, transformer);
-            referenceOperator.migrate(migration);
-        }
-
         if (refactoringTypes.stream().anyMatch(RefactoringType::isMethodParameterRefactoring)) {
-            var argumentsOperator = new MethodCallArgumentOperator<>(methodCallTransformer, transformer);
+            var argumentsOperator = new MethodCallArgumentOperator(transformationProvider, tracker);
             argumentsOperator.migrate(migration);
         }
 
+        if (refactoringTypes.stream().anyMatch(RefactoringType::isMethodReferenceRefactoring)) {
+            var referenceOperator = new ChangeMethodCallReferenceOperator(tracker, transformationProvider, dependencyFactory);
+            referenceOperator.migrate(migration);
+        }
+
         if (refactoringTypes.stream().anyMatch(RefactoringType::isExceptionRefactoring)) {
-            var exception = new MethodExceptionOperator<>(statementTransformer, transformer);
+            var exception = new MethodExceptionOperator<>(transformationProvider, tracker, dependencyFactory.getModel());
             exception.migrate(migration);
         }
     }

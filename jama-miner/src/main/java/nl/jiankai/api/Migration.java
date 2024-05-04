@@ -43,11 +43,15 @@ public record Migration(ApiMapping mapping, Migration next) {
      * @return the last found migration
      */
     public Optional<Migration> lastOf(RefactoringType refactoringType) {
+        return lastOf(Set.of(refactoringType));
+    }
+
+    public Optional<Migration> lastOf(Set<RefactoringType> refactoringTypes) {
         Migration current = this;
         Optional<Migration> lastKnown = Optional.empty();
 
         while (current != null) {
-            if (current.mapping.refactoringType() == refactoringType) {
+            if (refactoringTypes.contains(current.mapping.refactoringType())) {
                 lastKnown = Optional.of(current);
             }
             current = current.next;
