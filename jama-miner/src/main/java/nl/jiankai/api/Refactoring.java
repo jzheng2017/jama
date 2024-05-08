@@ -1,5 +1,7 @@
 package nl.jiankai.api;
 
+import nl.jiankai.api.project.Position;
+
 import java.util.Map;
 import java.util.Objects;
 

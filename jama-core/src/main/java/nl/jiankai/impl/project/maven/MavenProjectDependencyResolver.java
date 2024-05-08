@@ -1,9 +1,9 @@
-package nl.jiankai.impl.maven;
+package nl.jiankai.impl.project.maven;
 
-import nl.jiankai.api.Dependency;
-import nl.jiankai.api.ProjectCoordinate;
-import nl.jiankai.api.ProjectData;
-import nl.jiankai.api.ProjectDependencyResolver;
+import nl.jiankai.api.project.Dependency;
+import nl.jiankai.api.project.ProjectCoordinate;
+import nl.jiankai.api.project.ProjectData;
+import nl.jiankai.api.project.ProjectDependencyResolver;
 import nl.jiankai.util.FileUtil;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.FileFilterUtils;

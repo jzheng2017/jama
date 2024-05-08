@@ -1,10 +1,10 @@
-package nl.jiankai.impl.git;
+package nl.jiankai.impl.project.git;
 
-import nl.jiankai.api.GitRepository;
-import nl.jiankai.api.Project;
-import nl.jiankai.api.ProjectFactory;
-import nl.jiankai.api.ProjectType;
-import nl.jiankai.impl.maven.MavenProjectFactory;
+import nl.jiankai.api.project.GitRepository;
+import nl.jiankai.api.project.Project;
+import nl.jiankai.api.project.ProjectFactory;
+import nl.jiankai.api.project.ProjectType;
+import nl.jiankai.impl.project.maven.MavenProjectFactory;
 import nl.jiankai.util.FileUtil;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;

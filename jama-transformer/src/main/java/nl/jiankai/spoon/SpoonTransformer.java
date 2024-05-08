@@ -1,6 +1,6 @@
 package nl.jiankai.spoon;
 
-import nl.jiankai.api.Project;
+import nl.jiankai.api.project.Project;
 import nl.jiankai.api.Transformer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

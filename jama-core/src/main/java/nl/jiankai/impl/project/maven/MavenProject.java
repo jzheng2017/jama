@@ -1,10 +1,10 @@
-package nl.jiankai.impl.maven;
+package nl.jiankai.impl.project.maven;
 
 
-import nl.jiankai.api.Dependency;
-import nl.jiankai.api.Project;
-import nl.jiankai.api.ProjectData;
-import nl.jiankai.api.ProjectType;
+import nl.jiankai.api.project.Dependency;
+import nl.jiankai.api.project.Project;
+import nl.jiankai.api.project.ProjectData;
+import nl.jiankai.api.project.ProjectType;
 import nl.jiankai.util.FileUtil;
 
 import java.io.File;

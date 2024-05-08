@@ -1,9 +1,9 @@
-package nl.jiankai.impl.maven;
+package nl.jiankai.impl.project.maven;
 
 
 
-import nl.jiankai.api.Project;
-import nl.jiankai.api.ProjectFactory;
+import nl.jiankai.api.project.Project;
+import nl.jiankai.api.project.ProjectFactory;
 
 import java.io.File;
 

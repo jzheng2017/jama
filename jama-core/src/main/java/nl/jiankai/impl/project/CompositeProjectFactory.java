@@ -1,9 +1,9 @@
-package nl.jiankai.impl;
+package nl.jiankai.impl.project;
 
-import nl.jiankai.api.Project;
-import nl.jiankai.api.ProjectFactory;
-import nl.jiankai.impl.git.JGitRepositoryFactory;
-import nl.jiankai.impl.maven.MavenProjectFactory;
+import nl.jiankai.api.project.Project;
+import nl.jiankai.api.project.ProjectFactory;
+import nl.jiankai.impl.project.git.JGitRepositoryFactory;
+import nl.jiankai.impl.project.maven.MavenProjectFactory;
 import nl.jiankai.util.FileUtil;
 import org.eclipse.jgit.lib.RepositoryCache;
 import org.eclipse.jgit.util.FS;

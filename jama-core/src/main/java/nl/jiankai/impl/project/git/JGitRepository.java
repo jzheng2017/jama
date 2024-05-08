@@ -1,6 +1,6 @@
-package nl.jiankai.impl.git;
+package nl.jiankai.impl.project.git;
 
-import nl.jiankai.api.*;
+import nl.jiankai.api.project.*;
 import org.eclipse.jgit.api.CheckoutCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;

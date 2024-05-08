@@ -1,6 +1,9 @@
 package nl.jiankai.spoon;
 
 import nl.jiankai.api.*;
+import nl.jiankai.api.project.Position;
+import nl.jiankai.api.project.Project;
+import nl.jiankai.api.project.ProjectType;
 import spoon.Launcher;
 import spoon.MavenLauncher;
 import spoon.reflect.CtModel;

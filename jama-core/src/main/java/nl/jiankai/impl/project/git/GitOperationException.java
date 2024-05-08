@@ -1,4 +1,4 @@
-package nl.jiankai.impl.git;
+package nl.jiankai.impl.project.git;
 
 public class GitOperationException extends RuntimeException {
 

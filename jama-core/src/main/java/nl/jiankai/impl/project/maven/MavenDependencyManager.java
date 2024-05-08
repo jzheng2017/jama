@@ -1,7 +1,7 @@
-package nl.jiankai.impl.maven;
+package nl.jiankai.impl.project.maven;
 
-import nl.jiankai.api.Dependency;
-import nl.jiankai.api.ProjectDependencyManager;
+import nl.jiankai.api.project.Dependency;
+import nl.jiankai.api.project.ProjectDependencyManager;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;

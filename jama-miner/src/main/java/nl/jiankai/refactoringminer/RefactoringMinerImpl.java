@@ -6,6 +6,8 @@ import gr.uom.java.xmi.UMLType;
 import gr.uom.java.xmi.decomposition.VariableDeclaration;
 import gr.uom.java.xmi.diff.*;
 import nl.jiankai.api.*;
+import nl.jiankai.api.project.GitRepository;
+import nl.jiankai.api.project.Position;
 import org.eclipse.jgit.lib.Repository;
 import org.refactoringminer.api.GitHistoryRefactoringMiner;
 import org.refactoringminer.api.GitService;

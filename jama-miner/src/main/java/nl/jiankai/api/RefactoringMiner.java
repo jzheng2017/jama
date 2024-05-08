@@ -1,6 +1,8 @@
 package nl.jiankai.api;
 
 
+import nl.jiankai.api.project.GitRepository;
+
 import java.util.Collection;
 import java.util.Set;
 

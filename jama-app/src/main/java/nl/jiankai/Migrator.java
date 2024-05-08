@@ -1,6 +1,11 @@
 package nl.jiankai;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import nl.jiankai.api.*;
+import nl.jiankai.api.project.GitRepository;
+import nl.jiankai.api.storage.CacheService;
+import nl.jiankai.impl.JacksonSerializationService;
+import nl.jiankai.impl.storage.MultiFileCacheService;
 import nl.jiankai.migration.MethodMigrationPathEvaluatorImpl;
 import nl.jiankai.operators.*;
 import nl.jiankai.refactoringminer.RefactoringMinerImpl;
@@ -36,12 +41,21 @@ public class Migrator {
         this.outputDirectory = outputDirectory;
     }
 
+    @JsonIgnoreProperties({"id"})
+    private record RefactoringCollection(String startCommit, String endCommit,
+                                         Collection<Refactoring> refactorings) implements Identifiable {
+        @Override
+        public String getId() {
+            return startCommit + ":" + endCommit;
+        }
+    }
+
     public void migrate(GitRepository toMigrateProject, GitRepository dependencyProject, String startCommitId, String endCommitId, String newVersion) {
         long start = System.currentTimeMillis();
         setup(toMigrateProject);
 
-        RefactoringMiner refactoringMiner = new RefactoringMinerImpl();
-        Collection<Refactoring> refactorings = refactoringMiner.detectRefactoringBetweenCommit(dependencyProject, startCommitId, endCommitId);
+        Collection<Refactoring> refactorings = getRefactorings(dependencyProject, startCommitId, endCommitId);
+
         LOGGER.info("Found {} refactorings", refactorings.size());
 
         Transformer<Processor<?>> transformer = new SpoonTransformer(toMigrateProject, outputDirectory);
@@ -74,8 +88,27 @@ public class Migrator {
         }
 
         long end = System.currentTimeMillis();
-        LOGGER.info("It took {} seconds to migrate {}", (end - start)/1000, toMigrateProject.getId());
+        LOGGER.info("It took {} seconds to migrate {}", (end - start) / 1000, toMigrateProject.getId());
         compile(outputDirectory, dependencyProject, newVersion);
+    }
+
+    private static Collection<Refactoring> getRefactorings(GitRepository dependencyProject, String startCommitId, String endCommitId) {
+        RefactoringMiner refactoringMiner = new RefactoringMinerImpl();
+        Collection<Refactoring> refactorings;
+        CacheService<RefactoringCollection> cacheService = new MultiFileCacheService<>("/home/jiankai/test/cache", new JacksonSerializationService(), RefactoringCollection.class);
+
+        if (cacheService.isCached(startCommitId + ":" + endCommitId)) {
+            refactorings = cacheService
+                    .get(startCommitId + ":" + endCommitId)
+                    .orElseGet(() -> new RefactoringCollection(startCommitId, endCommitId, refactoringMiner.detectRefactoringBetweenCommit(dependencyProject, startCommitId, endCommitId)))
+                    .refactorings();
+        } else {
+            refactorings = refactoringMiner.detectRefactoringBetweenCommit(dependencyProject, startCommitId, endCommitId);
+            RefactoringCollection refactoringCollection = new RefactoringCollection(startCommitId, endCommitId, refactorings);
+            cacheService.write(refactoringCollection);
+        }
+
+        return refactorings;
     }
 
     private void setup(GitRepository toMigrateProject) {

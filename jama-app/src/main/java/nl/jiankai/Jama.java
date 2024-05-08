@@ -1,29 +1,9 @@
 package nl.jiankai;
 
-import nl.jiankai.api.*;
-import nl.jiankai.impl.CompositeProjectFactory;
-import nl.jiankai.impl.git.JGitRepositoryFactory;
-import spoon.Launcher;
-import spoon.MavenLauncher;
-import spoon.SpoonModelBuilder;
-import spoon.processing.AbstractProcessor;
-import spoon.processing.ProcessingManager;
-import spoon.reflect.CtModel;
-import spoon.reflect.cu.CompilationUnit;
-import spoon.reflect.cu.SourcePosition;
-import spoon.reflect.declaration.CtElement;
-import spoon.reflect.declaration.CtExecutable;
-import spoon.reflect.declaration.CtType;
-import spoon.reflect.declaration.ModifierKind;
-import spoon.reflect.reference.CtTypeReference;
-import spoon.reflect.visitor.filter.NamedElementFilter;
-import spoon.reflect.visitor.filter.TypeFilter;
-import spoon.support.QueueProcessingManager;
-import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
-import spoon.support.compiler.jdt.JDTSnippetCompiler;
+import nl.jiankai.api.project.GitRepository;
+import nl.jiankai.impl.project.git.JGitRepositoryFactory;
 
 import java.io.File;
-import java.util.List;
 
 public class Jama {
 
