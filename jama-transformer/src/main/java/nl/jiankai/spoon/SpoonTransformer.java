@@ -39,7 +39,7 @@ public class SpoonTransformer implements Transformer<Processor<?>> {
     public void run() {
         Launcher launcher = getLauncher(project);
         processors.forEach(launcher::addProcessor);
-        launcher.setSourceOutputDirectory(new File(targetDirectory, Paths.get("server","src", "main", "java").toString()));
+        launcher.setSourceOutputDirectory(new File(targetDirectory, Paths.get("src", "main", "java").toString()));
         LOGGER.info("Executing {} processors", processors.size());
         launcher.run();
     }

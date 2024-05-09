@@ -9,6 +9,7 @@ import nl.jiankai.util.FileUtil;
 
 import java.io.File;
 import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 
 public class MavenProject implements Project {
@@ -58,6 +59,11 @@ public class MavenProject implements Project {
     @Override
     public ProjectType getProjectType() {
         return ProjectType.MAVEN;
+    }
+
+    @Override
+    public Collection<File> getSourceDirectories() {
+        return FileUtil.findFileRecursive(getLocalPath(), "pom.xml", "");
     }
 
     @Override

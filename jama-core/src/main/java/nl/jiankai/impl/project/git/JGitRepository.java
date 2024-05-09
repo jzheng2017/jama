@@ -76,6 +76,11 @@ public class JGitRepository implements GitRepository {
     }
 
     @Override
+    public Collection<File> getSourceDirectories() {
+        return project.getSourceDirectories();
+    }
+
+    @Override
     public String toString() {
         return project.toString();
     }

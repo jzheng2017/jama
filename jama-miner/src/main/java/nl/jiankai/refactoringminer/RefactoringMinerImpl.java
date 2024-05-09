@@ -51,30 +51,30 @@ public class RefactoringMinerImpl implements RefactoringMiner {
                 private Map<String, Object> getContext(org.refactoringminer.api.Refactoring r) {
                     if (r instanceof ReorderParameterRefactoring ropr) {
                         return Map.of(
-                                "before", ropr.getParametersBefore().stream().map(v -> new Variable(v.getType().toString(), v.getVariableName())).toList(),
-                                "after", ropr.getParametersAfter().stream().map(v -> new Variable(v.getType().toString(), v.getVariableName())).toList()
+                                "before", ropr.getParametersBefore().stream().map(v -> Map.of("type", v.getType().toString(), "name", v.getVariableName())).toList(),
+                                "after", ropr.getParametersAfter().stream().map(v ->  Map.of("type", v.getType().toString(), "name", v.getVariableName())).toList()
                         );
                     } else if (r instanceof AddParameterRefactoring apr) {
                         return Map.of(
-                                "before", apr.getOperationBefore().getParameterDeclarationList().stream().map(v -> new Variable(v.getType().toString(), v.getVariableName())).toList(),
-                                "after", apr.getOperationAfter().getParameterDeclarationList().stream().map(v -> new Variable(v.getType().toString(), v.getVariableName())).toList()
+                                "before", apr.getOperationBefore().getParameterDeclarationList().stream().map(v -> Map.of("type", v.getType().toString(), "name", v.getVariableName())).toList(),
+                                "after", apr.getOperationAfter().getParameterDeclarationList().stream().map(v -> Map.of("type", v.getType().toString(), "name", v.getVariableName())).toList()
                         );
                     } else if (r instanceof RemoveParameterRefactoring rpr) {
                         return Map.of(
-                                "before", rpr.getOperationBefore().getParameterDeclarationList().stream().map(v -> new Variable(v.getType().toString(), v.getVariableName())).toList(),
-                                "after", rpr.getOperationAfter().getParameterDeclarationList().stream().map(v -> new Variable(v.getType().toString(), v.getVariableName())).toList()
+                                "before", rpr.getOperationBefore().getParameterDeclarationList().stream().map(v -> Map.of("type", v.getType().toString(), "name", v.getVariableName())).toList(),
+                                "after", rpr.getOperationAfter().getParameterDeclarationList().stream().map(v -> Map.of("type", v.getType().toString(), "name", v.getVariableName())).toList()
                         );
                     } else if (r instanceof RenameVariableRefactoring rvr) {
                         return Map.of(
-                                "before", rvr.getOperationBefore().getParameterDeclarationList().stream().map(v -> new Variable(v.getType().toString(), v.getVariableName())).toList(),
-                                "after", rvr.getOperationAfter().getParameterDeclarationList().stream().map(v -> new Variable(v.getType().toString(), v.getVariableName())).toList(),
+                                "before", rvr.getOperationBefore().getParameterDeclarationList().stream().map(v -> Map.of("type", v.getType().toString(), "name", v.getVariableName())).toList(),
+                                "after", rvr.getOperationAfter().getParameterDeclarationList().stream().map(v -> Map.of("type", v.getType().toString(), "name", v.getVariableName())).toList(),
                                 "original", rvr.getOriginalVariable().getVariableName(),
                                 "renamed", rvr.getRenamedVariable().getVariableName()
                         );
                     } else if (r instanceof ChangeVariableTypeRefactoring cvtr) {
                         return Map.of(
-                                "before", cvtr.getOperationBefore().getParameterDeclarationList().stream().map(v -> new Variable(v.getType().toString(), v.getVariableName())).toList(),
-                                "after", cvtr.getOperationAfter().getParameterDeclarationList().stream().map(v -> new Variable(v.getType().toString(), v.getVariableName())).toList(),
+                                "before", cvtr.getOperationBefore().getParameterDeclarationList().stream().map(v -> Map.of("type", v.getType().toString(), "name", v.getVariableName())).toList(),
+                                "after", cvtr.getOperationAfter().getParameterDeclarationList().stream().map(v -> Map.of("type", v.getType().toString(), "name", v.getVariableName())).toList(),
                                 "changedTypeVariable", cvtr.getChangedTypeVariable().getVariableName()
                         );
                     } else if (r instanceof EncapsulateAttributeRefactoring ear) {

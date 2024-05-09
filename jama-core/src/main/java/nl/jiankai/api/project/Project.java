@@ -46,4 +46,6 @@ public interface Project extends Identifiable {
     void upgradeDependency(Dependency dependency);
 
     ProjectType getProjectType();
+
+    Collection<File> getSourceDirectories();
 }

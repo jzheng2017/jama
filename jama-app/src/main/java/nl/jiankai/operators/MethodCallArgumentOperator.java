@@ -124,7 +124,9 @@ public class MethodCallArgumentOperator implements MigrationOperator {
         List<List<Variable>> parameters = new ArrayList<>();
         while (current != null) {
             if (current.mapping().refactoringType().isMethodParameterRefactoring()) {
-                parameters.add((List<Variable>) current.mapping().context().get(key));
+                List<Map<String, String>> params = (List<Map<String, String>>) current.mapping().context().get(key);
+                List<Variable> variables = params.stream().map(m -> new Variable(m.get("type"), m.get("name"))).toList();
+                parameters.add(variables);
             }
             current = current.next();
         }

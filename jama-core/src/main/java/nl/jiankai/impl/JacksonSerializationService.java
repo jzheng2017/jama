@@ -2,16 +2,23 @@ package nl.jiankai.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import nl.jiankai.api.SerializationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Map;
 
 public class JacksonSerializationService implements SerializationService {
     private static final Logger LOGGER = LoggerFactory.getLogger(JacksonSerializationService.class);
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public JacksonSerializationService() {
+    }
+
     @Override
     public byte[] serialize(Object object) {
         try {
