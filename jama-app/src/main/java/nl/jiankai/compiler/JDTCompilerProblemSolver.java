@@ -36,7 +36,6 @@ public class JDTCompilerProblemSolver {
     private static final Logger LOGGER = LoggerFactory.getLogger(JDTCompilerProblemSolver.class);
     private static final int MAX_ITERATIONS = 2;
     private static final int ERROR_LIMIT = 50;
-    private static final ElementTransformationTracker tracker = new ElementTransformationTracker();
     public static final int METHOD_UNDEFINED = 67108964;
     public static final int MUST_OVERRIDE_OR_IMPLEMENT_SUPERTYPE_METHOD = 67109498;
     public static final int MUST_IMPLEMENT_METHOD = 67109264;
@@ -44,7 +43,7 @@ public class JDTCompilerProblemSolver {
     public static final int CANNOT_BE_RESOLVED_TO_A_TYPE = 16777218;
     public static final int UNHANDLED_EXCEPTION = 16777384;
 
-    public static void compile(File outputDirectory, Project dependencyProject, String newVersion) {
+    public static void compile(File outputDirectory, Project dependencyProject, String newVersion, ElementTransformationTracker tracker) {
         var methodCallTransformationProvider = new SpoonTransformationProvider<CtInvocation>();
         var classTransformationProvider = new SpoonTransformationProvider<CtClass>();
         ProjectCoordinate coord = dependencyProject.getProjectVersion().coordinate();;
@@ -53,10 +52,10 @@ public class JDTCompilerProblemSolver {
         migratedProject.install();
         Transformer<Processor<?>> compilationTransformer = new SpoonTransformer(migratedProject, outputDirectory);
 
-        compile(migratedProject, compilationTransformer, 1, classTransformationProvider, methodCallTransformationProvider);
+        compile(migratedProject, compilationTransformer, 1, classTransformationProvider, methodCallTransformationProvider, tracker);
     }
 
-    public static void compile(Project project, Transformer<Processor<?>> transformer, int iterations, TransformationProvider<CtClass> classTransformationProvider, TransformationProvider<CtInvocation> methodCallTransformationProvider) {
+    public static void compile(Project project, Transformer<Processor<?>> transformer, int iterations, TransformationProvider<CtClass> classTransformationProvider, TransformationProvider<CtInvocation> methodCallTransformationProvider, ElementTransformationTracker tracker) {
         if (iterations > MAX_ITERATIONS) {
             return;
         }
@@ -73,33 +72,33 @@ public class JDTCompilerProblemSolver {
             LOGGER.info("Errors (limited to {}):", ERROR_LIMIT);
             problems.stream().limit(ERROR_LIMIT).forEach(problem -> LOGGER.info(problem.toString()));
             LOGGER.info("=============================");
-            problems.forEach(problem -> solve(problem, classTransformationProvider, methodCallTransformationProvider));
+            problems.forEach(problem -> solve(problem, classTransformationProvider, methodCallTransformationProvider, tracker));
             ElementHandler<Processor<?>> classTransformer = new SpoonClassTransformer(classTransformationProvider);
             ElementHandler<Processor<?>> methodCallTransformer = new SpoonMethodCallTransformer(methodCallTransformationProvider);
             transformer.addProcessor(classTransformer.handle());
             transformer.addProcessor(methodCallTransformer.handle());
             transformer.run();
             transformer.reset();
-            compile(project, transformer, iterations + 1, classTransformationProvider, methodCallTransformationProvider);
+            compile(project, transformer, iterations + 1, classTransformationProvider, methodCallTransformationProvider, tracker);
         }
         tracker.report();
     }
 
-    private static <T> void solve(CategorizedProblem categorizedProblem, TransformationProvider<CtClass> classTransformationProvider, TransformationProvider<CtInvocation> methodCallTransformationProvider) {
+    private static void solve(CategorizedProblem categorizedProblem, TransformationProvider<CtClass> classTransformationProvider, TransformationProvider<CtInvocation> methodCallTransformationProvider, ElementTransformationTracker tracker) {
         List<String> args = Arrays.stream(categorizedProblem.getArguments()).toList();
         int size = args.size();
         if (categorizedProblem.getID() == MUST_IMPLEMENT_METHOD) {
             String qualifiedSignature = "%s#%s(%s)".formatted(args.get(size - 2), args.getFirst(), unqualify(args.get(size - 3)));
-            classTransformationProvider.produce(args.getLast(), new ImplementMethodTransformation(qualifiedSignature, tracker));
+            classTransformationProvider.add(args.getLast(), new ImplementMethodTransformation(qualifiedSignature, tracker));
         } else if (categorizedProblem.getID() == MUST_OVERRIDE_OR_IMPLEMENT_SUPERTYPE_METHOD) {
             String qualifiedSignature = "%s#%s(%s)".formatted(args.getLast(), args.getFirst(), unqualify(args.get(1)));
-            classTransformationProvider.produce(args.getLast(), new RemoveMethodTransformation(qualifiedSignature, tracker));
+            classTransformationProvider.add(args.getLast(), new RemoveMethodTransformation(qualifiedSignature, tracker));
         } else if (categorizedProblem.getID() == METHOD_UNDEFINED) {
             String qualifiedSignature = "%s(%s)".formatted(args.get(1), unqualify(args.getLast()));
-            methodCallTransformationProvider.produce(qualifiedSignature, new RemoveMethodCallTransformation(qualifiedSignature, tracker));
+            methodCallTransformationProvider.add(qualifiedSignature, new RemoveMethodCallTransformation(qualifiedSignature, tracker));
         } else if (categorizedProblem.getID() == CANNOT_BE_RESOLVED_TO_A_TYPE) {
             String className = FileUtil.javaFileNameToFullyQualifiedClass(new String(categorizedProblem.getOriginatingFileName()));
-            classTransformationProvider.produce(className, new RemoveParentClassTransformation(className, args.getLast(), tracker));
+            classTransformationProvider.add(className, new RemoveParentClassTransformation(className, args.getLast(), tracker));
         }
     }
 

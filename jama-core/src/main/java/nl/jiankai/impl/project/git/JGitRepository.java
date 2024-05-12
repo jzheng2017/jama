@@ -11,6 +11,7 @@ import java.io.File;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 public class JGitRepository implements GitRepository {
     private static final Logger LOGGER = LoggerFactory.getLogger(JGitRepository.class);
@@ -53,6 +54,11 @@ public class JGitRepository implements GitRepository {
     @Override
     public void install() {
         project.install();
+    }
+
+    @Override
+    public boolean test(Set<String> testClasses) {
+        return project.test(testClasses);
     }
 
     @Override

@@ -11,7 +11,7 @@ public class SpoonTransformationProvider<E extends CtElement> implements Transfo
     private final Map<String, Queue<Transformation<E>>> transformationsPerSignature = new HashMap<>();
 
     @Override
-    public Stream<Transformation<E>> consume(String id) {
+    public Stream<Transformation<E>> get(String id) {
         if (!transformationsPerSignature.containsKey(id)) {
             return Stream.empty();
         }
@@ -20,7 +20,7 @@ public class SpoonTransformationProvider<E extends CtElement> implements Transfo
     }
 
     @Override
-    public void produce(String id, Transformation<E> transformation) {
+    public void add(String id, Transformation<E> transformation) {
         transformationsPerSignature
                 .computeIfAbsent(id, k -> new LinkedList<>())
                 .add(transformation);

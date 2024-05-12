@@ -54,7 +54,7 @@ public class MethodCallArgumentOperator implements MigrationOperator {
         for (Map.Entry<String, String> variable : changedVariables.entrySet()) {
             int index = afterNames.indexOf(variable.getValue());
             if (index >= 0) {
-                transformationProvider.produce(originalSignature, new ReplaceMethodCallArgumentTransformation<>(tracker, originalSignature, index, getDefaultValue(after.get(index).type())));
+                transformationProvider.add(originalSignature, new ReplaceMethodCallArgumentTransformation<>(tracker, originalSignature, index, getDefaultValue(after.get(index).type())));
             }
         }
     }
@@ -79,10 +79,10 @@ public class MethodCallArgumentOperator implements MigrationOperator {
             int index = after.indexOf(param);
             if (index >= current.size()) { // possible if param added during same commit
                 current.add(param);
-                transformationProvider.produce(currentSignature, new AddMethodCallArgumentTransformation<>(tracker, getDefaultValue(afterParameters.get(index).type()), currentSignature, -1));
+                transformationProvider.add(currentSignature, new AddMethodCallArgumentTransformation<>(tracker, getDefaultValue(afterParameters.get(index).type()), currentSignature, -1));
             } else {
                 current.add(index, param);
-                transformationProvider.produce(currentSignature, new AddMethodCallArgumentTransformation<>(tracker, getDefaultValue(afterParameters.get(index).type()), currentSignature, index));
+                transformationProvider.add(currentSignature, new AddMethodCallArgumentTransformation<>(tracker, getDefaultValue(afterParameters.get(index).type()), currentSignature, index));
             }
         }
     }
@@ -94,7 +94,7 @@ public class MethodCallArgumentOperator implements MigrationOperator {
 
         for (String param : removed) {
             int index = current.indexOf(param);
-            transformationProvider.produce(currentSignature, new RemoveMethodCallArgumentTransformation(tracker, currentSignature, index));
+            transformationProvider.add(currentSignature, new RemoveMethodCallArgumentTransformation(tracker, currentSignature, index));
             current.remove(index);
         }
     }
@@ -114,7 +114,7 @@ public class MethodCallArgumentOperator implements MigrationOperator {
             int newIndex = after.indexOf(param);
             if (oldIndex != newIndex) {
                 Collections.swap(current, oldIndex, newIndex);
-                transformationProvider.produce(currentSignature, new SwapMethodCallArgumentsTransformation(tracker, currentSignature, oldIndex, newIndex));
+                transformationProvider.add(currentSignature, new SwapMethodCallArgumentsTransformation(tracker, currentSignature, oldIndex, newIndex));
             }
         }
     }

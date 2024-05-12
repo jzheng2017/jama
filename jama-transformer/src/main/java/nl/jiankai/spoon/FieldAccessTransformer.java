@@ -20,7 +20,7 @@ public class FieldAccessTransformer implements ElementHandler<Processor<?>> {
             @Override
             public void process(CtFieldAccess fieldAccess) {
                 transformationProvider
-                        .consume(SpoonUtil.getSignature(fieldAccess))
+                        .get(SpoonUtil.getSignature(fieldAccess))
                         .forEach(transformation -> transformation.apply(fieldAccess));
             }
         };

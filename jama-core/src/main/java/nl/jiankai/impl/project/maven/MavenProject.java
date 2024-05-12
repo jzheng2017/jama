@@ -6,16 +6,22 @@ import nl.jiankai.api.project.Project;
 import nl.jiankai.api.project.ProjectData;
 import nl.jiankai.api.project.ProjectType;
 import nl.jiankai.util.FileUtil;
+import org.apache.commons.io.filefilter.NameFileFilter;
+import org.apache.maven.shared.invoker.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.io.File;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
+import java.io.FilenameFilter;
+import java.util.*;
 
 public class MavenProject implements Project {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MavenProject.class);
     private final File projectRootPath;
     private final MavenProjectDependencyResolver dependencyResolver = new MavenProjectDependencyResolver();
     private final MavenDependencyManager dependencyManager;
+
     public MavenProject(File projectRootPath) {
         this.projectRootPath = projectRootPath;
         this.dependencyManager = new MavenDependencyManager(FileUtil.findPomFile(projectRootPath));
@@ -42,6 +48,29 @@ public class MavenProject implements Project {
     }
 
     @Override
+    public boolean test(Set<String> testClasses) {
+        File file = FileUtil.findPomFile(projectRootPath);
+        InvocationRequest request = new DefaultInvocationRequest();
+        request.setPomFile(file);
+        if (testClasses.isEmpty()) {
+            request.setGoals(Collections.singletonList("test"));
+        } else {
+            request.setGoals(Collections.singletonList("test -Dtest=%s".formatted(String.join(",", testClasses))));
+        }
+
+        Invoker invoker = new DefaultInvoker();
+
+        try {
+            LOGGER.info("Running mvn test");
+            invoker.execute(request);
+            return true;
+        } catch (MavenInvocationException e) {
+            LOGGER.error("Something went wrong when trying to invoke mvn test", e);
+            return false;
+        }
+    }
+
+    @Override
     public ProjectData getProjectVersion() {
         return dependencyResolver.getProjectVersion(getLocalPath());
     }
@@ -63,7 +92,14 @@ public class MavenProject implements Project {
 
     @Override
     public Collection<File> getSourceDirectories() {
-        return FileUtil.findFileRecursive(getLocalPath(), "pom.xml", "");
+        return FileUtil
+                .findFileRecursive(getLocalPath(), "pom.xml", "")
+                .stream()
+                .filter(pom -> {
+                    File parent = pom.getParentFile();
+                    return Objects.requireNonNull(parent.listFiles((FilenameFilter) new NameFileFilter("src"))).length == 1;
+                })
+                .toList();
     }
 
     @Override

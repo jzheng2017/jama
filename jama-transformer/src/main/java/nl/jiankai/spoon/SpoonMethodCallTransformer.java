@@ -6,6 +6,8 @@ import spoon.processing.AbstractProcessor;
 import spoon.processing.Processor;
 import spoon.reflect.code.CtInvocation;
 
+import static nl.jiankai.spoon.SpoonUtil.getSignature;
+
 public class SpoonMethodCallTransformer implements ElementHandler<Processor<?>> {
     private final TransformationProvider<CtInvocation> transformationProvider;
 
@@ -19,7 +21,7 @@ public class SpoonMethodCallTransformer implements ElementHandler<Processor<?>> 
             @Override
             public void process(CtInvocation methodCall) {
                 transformationProvider
-                        .consume(SpoonUtil.getSignature(methodCall))
+                        .get(getSignature(methodCall))
                         .forEach(transformation -> transformation.apply(methodCall));
             }
         };

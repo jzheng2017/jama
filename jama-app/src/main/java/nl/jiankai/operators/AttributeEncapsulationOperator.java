@@ -19,7 +19,7 @@ public class AttributeEncapsulationOperator implements MigrationOperator {
     public void migrate(Migration migration) {
         String getterSignature = migration.mapping().context().get("getter").toString();
         String attributeSignature = migration.mapping().original().signature();
-        transformationProvider.produce(attributeSignature, new EncapsulateAttributeTransformation(tracker, attributeSignature, getterSignature));
+        transformationProvider.add(attributeSignature, new EncapsulateAttributeTransformation(tracker, attributeSignature, getterSignature));
 //        transformer.addProcessor(statementTransformer.encapsulateAttribute(migration.mapping().original().signature(),getterSignature));
     }
 }

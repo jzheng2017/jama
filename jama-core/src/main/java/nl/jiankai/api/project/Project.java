@@ -4,6 +4,7 @@ import nl.jiankai.api.Identifiable;
 
 import java.io.File;
 import java.util.Collection;
+import java.util.Set;
 
 public interface Project extends Identifiable {
     /**
@@ -27,6 +28,8 @@ public interface Project extends Identifiable {
      * Download all dependencies of the project to a local repository
      */
     void install();
+
+    boolean test(Set<String> testClasses);
 
     /**
      * @return the project details containing group id, artifact id and the version

@@ -1,11 +1,10 @@
 package nl.jiankai.api;
 
-import java.util.Queue;
 import java.util.stream.Stream;
 
 public interface TransformationProvider<E> {
 
-    Stream<Transformation<E>> consume(String id);
+    Stream<Transformation<E>> get(String id);
 
-    void produce(String id, Transformation<E> transformer);
+    void add(String id, Transformation<E> transformer);
 }

@@ -5,7 +5,7 @@ import nl.jiankai.api.Transformation;
 import nl.jiankai.api.TransformationEvent;
 import spoon.reflect.code.CtInvocation;
 
-public class AddMethodCallArgumentTransformation<T> implements Transformation<CtInvocation>{
+public class AddMethodCallArgumentTransformation<T> implements Transformation<CtInvocation> {
     private final ElementTransformationTracker tracker;
     private final T value;
     private final String methodSignature;

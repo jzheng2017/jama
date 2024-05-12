@@ -3,6 +3,7 @@ package nl.jiankai.refactoringminer;
 import gr.uom.java.xmi.UMLOperation;
 import gr.uom.java.xmi.UMLParameter;
 import gr.uom.java.xmi.UMLType;
+import gr.uom.java.xmi.Visibility;
 import gr.uom.java.xmi.decomposition.VariableDeclaration;
 import gr.uom.java.xmi.diff.*;
 import nl.jiankai.api.*;
@@ -14,12 +15,14 @@ import org.refactoringminer.api.GitService;
 import org.refactoringminer.api.RefactoringHandler;
 import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 import org.refactoringminer.util.GitServiceImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class RefactoringMinerImpl implements RefactoringMiner {
-
+    private static final Logger LOGGER = LoggerFactory.getLogger(RefactoringMinerImpl.class);
     public RefactoringMinerImpl() {
     }
 
@@ -38,7 +41,7 @@ public class RefactoringMinerImpl implements RefactoringMiner {
                             .stream()
                             .filter(r -> {
                                 RefactoringType refactoringType = convertRefactoringType(r.getRefactoringType());
-                                return refactoringType != RefactoringType.UNKNOWN && (refactoringTypes.isEmpty() || refactoringTypes.contains(refactoringType));
+                                return refactoringType != RefactoringType.UNKNOWN && (refactoringTypes.isEmpty() || refactoringTypes.contains(refactoringType)) && isPublic(r);
                             })
                             .map(r -> new Refactoring(commitId, sequence, getBeforeElement(r), getAfterElement(r), convertRefactoringType(r.getRefactoringType()), getContext(r)))
                             .toList();
@@ -93,6 +96,37 @@ public class RefactoringMinerImpl implements RefactoringMiner {
         } catch (Exception e) {
             throw new IllegalArgumentException("Something went wrong with the repository '%s'".formatted(gitRepository.getId()), e);
         }
+    }
+
+    private boolean isPublic(org.refactoringminer.api.Refactoring r) {
+        if (r instanceof ChangeReturnTypeRefactoring crtr) {
+            return crtr.getOperationBefore().getVisibility() == Visibility.PUBLIC;
+        } else if (r instanceof AddParameterRefactoring apr) {
+            return apr.getOperationBefore().getVisibility() == Visibility.PUBLIC;
+        } else if (r instanceof RemoveParameterRefactoring rpr) {
+            return rpr.getOperationBefore().getVisibility() == Visibility.PUBLIC;
+        } else if (r instanceof ChangeVariableTypeRefactoring cvtr) {
+            return cvtr.getOriginalVariable().getModifiers().stream().anyMatch(modifier -> modifier.getKeyword().equals("public"));
+        } else if (r instanceof RenameOperationRefactoring ror) {
+            return ror.getOriginalOperation().getVisibility() == Visibility.PUBLIC;
+        } else if (r instanceof ReorderParameterRefactoring ropr) {
+            return ropr.getOperationBefore().getVisibility() == Visibility.PUBLIC;
+        } else if (r instanceof RenameVariableRefactoring rvr) {
+            return rvr.getOriginalVariable().getModifiers().stream().anyMatch(modifier -> modifier.getKeyword().equals("public"));
+        } else if (r instanceof AddThrownExceptionTypeRefactoring atet) {
+            return atet.getOperationBefore().getVisibility() == Visibility.PUBLIC;
+        } else if (r instanceof MoveOperationRefactoring mor) {
+            return mor.getOriginalOperation().getVisibility() == Visibility.PUBLIC;
+        } else if (r instanceof RenameClassRefactoring rcr) {
+            return rcr.getOriginalClass().getVisibility() == Visibility.PUBLIC;
+        } else if (r instanceof MoveClassRefactoring mcr) {
+            return mcr.getOriginalClass().getVisibility() == Visibility.PUBLIC;
+        } else if (r instanceof EncapsulateAttributeRefactoring ear) {
+            return ear.getAttributeBefore().getVisibility() == Visibility.PUBLIC;
+        }
+
+        LOGGER.warn("Could not determine visibility of unsupported refactored code element with refactoring type {}", r.getRefactoringType());
+        return false;
     }
 
     private Refactoring.CodeElement getBeforeElement(org.refactoringminer.api.Refactoring refactoring) {

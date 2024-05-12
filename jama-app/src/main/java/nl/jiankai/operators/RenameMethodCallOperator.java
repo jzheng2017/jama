@@ -2,7 +2,7 @@ package nl.jiankai.operators;
 
 import nl.jiankai.ElementTransformationTracker;
 import nl.jiankai.api.*;
-import nl.jiankai.spoon.transformations.method.MethodCallRenameTransformation;
+import nl.jiankai.spoon.transformations.method.RenameMethodCallTransformation;
 import spoon.reflect.code.CtInvocation;
 
 public class RenameMethodCallOperator implements MigrationOperator {
@@ -19,6 +19,6 @@ public class RenameMethodCallOperator implements MigrationOperator {
         String originalSignature = migration.mapping().original().signature();
         String finalName = migration.end().target().name();
 
-        transformationProvider.produce(originalSignature, new MethodCallRenameTransformation(tracker, finalName, originalSignature));
+        transformationProvider.add(originalSignature, new RenameMethodCallTransformation(tracker, finalName, originalSignature));
     }
 }

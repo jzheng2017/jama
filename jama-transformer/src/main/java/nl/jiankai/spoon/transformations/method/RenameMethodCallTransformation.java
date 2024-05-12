@@ -10,13 +10,13 @@ import spoon.reflect.code.CtInvocation;
 /**
  * Renames the method name of a method call
  */
-public class MethodCallRenameTransformation implements Transformation<CtInvocation> {
-    private final Logger LOGGER = LoggerFactory.getLogger(MethodCallRenameTransformation.class);
+public class RenameMethodCallTransformation implements Transformation<CtInvocation> {
+    private final Logger LOGGER = LoggerFactory.getLogger(RenameMethodCallTransformation.class);
     private final ElementTransformationTracker tracker;
     private final String newName;
     private final String originalSignature;
 
-    public MethodCallRenameTransformation(ElementTransformationTracker tracker, String newName, String originalSignature) {
+    public RenameMethodCallTransformation(ElementTransformationTracker tracker, String newName, String originalSignature) {
         this.tracker = tracker;
         this.newName = newName;
         this.originalSignature = originalSignature;
