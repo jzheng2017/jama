@@ -23,6 +23,6 @@ public class SwapMethodCallArgumentsTransformation implements Transformation<CtI
     @Override
     public void apply(CtInvocation methodCall) {
         Collections.swap(methodCall.getArguments(), positionArgument, positionArgument2);
-        tracker.count(new TransformationEvent("Swapping arguments method call", methodSignature));
+        tracker.count(new TransformationEvent("Swapping arguments method call", methodSignature), methodCall.getPosition().getFile().getAbsolutePath());
     }
 }

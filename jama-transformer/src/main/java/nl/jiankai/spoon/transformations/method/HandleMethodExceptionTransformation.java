@@ -65,7 +65,7 @@ public class HandleMethodExceptionTransformation implements Transformation<CtInv
                     }
 
                     parent.replace(tryElement);
-                    tracker.count(new TransformationEvent("Handle exception", methodSignature));
+                    tracker.count(new TransformationEvent("Handle exception", methodSignature), methodCall.getPosition().getFile().getAbsolutePath());
                 });
     }
 

@@ -30,6 +30,6 @@ public class ChangeMethodCallReferenceTransformation implements Transformation<C
         methodCall.getExecutable().setDeclaringType(ref);
         CtTypeAccess target = (CtTypeAccess<?>) methodCall.getTarget();
         target.setAccessedType(ref);
-        tracker.count(new TransformationEvent("Changing method call reference", methodSignature));
+        tracker.count(new TransformationEvent("Changing method call reference", methodSignature), methodCall.getPosition().getFile().getAbsolutePath());
     }
 }

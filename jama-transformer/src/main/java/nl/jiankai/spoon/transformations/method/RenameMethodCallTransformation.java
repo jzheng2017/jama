@@ -25,6 +25,6 @@ public class RenameMethodCallTransformation implements Transformation<CtInvocati
     @Override
     public void apply(CtInvocation methodCall) {
         methodCall.getExecutable().setSimpleName(newName);
-        tracker.count(new TransformationEvent("Renaming method call", originalSignature));
+        tracker.count(new TransformationEvent("Renaming method call", originalSignature), methodCall.getPosition().getFile().getAbsolutePath());
     }
 }

@@ -29,7 +29,7 @@ public class RemoveMethodCallTransformation implements Transformation<CtInvocati
                                     TypeUtil.getDefaultValue(SpoonUtil.inferMethodCallType(methodCall))
                             )
             );
-            tracker.count(new TransformationEvent("Removing method call", methodSignature));
+            tracker.count(new TransformationEvent("Removing method call", methodSignature), methodCall.getPosition().getFile().getAbsolutePath());
         }
     }
 }

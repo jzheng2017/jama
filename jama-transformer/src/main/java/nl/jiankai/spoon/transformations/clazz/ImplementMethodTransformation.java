@@ -32,7 +32,7 @@ public class ImplementMethodTransformation implements Transformation<CtClass> {
             clone.setBody(ctClass.getFactory().createCtThrow("new UnsupportedOperationException(\"Implement this method\")"));
             LOGGER.info("Overriding/implementing method {}", methodSignature);
             ctClass.addMethod(clone);
-            tracker.count(new TransformationEvent("Implement method", methodSignature));
+            tracker.count(new TransformationEvent("Implement method", methodSignature), ctClass.getPosition().getFile().getAbsolutePath());
         });
     }
 

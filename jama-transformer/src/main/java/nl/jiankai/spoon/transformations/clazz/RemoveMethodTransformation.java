@@ -28,7 +28,7 @@ public class RemoveMethodTransformation implements Transformation<CtClass> {
         foundMethod.ifPresent(method -> {
             LOGGER.info("Removing method {}", methodSignature);
             ctClass.removeMethod(method);
-            tracker.count(new TransformationEvent("Remove method", methodSignature));
+            tracker.count(new TransformationEvent("Remove method", methodSignature), ctClass.getPosition().getFile().getAbsolutePath());
         });
     }
     private Optional<CtMethod<?>> findMethod(Collection<CtMethod<?>> methods, String methodSignature) {

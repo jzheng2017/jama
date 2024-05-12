@@ -13,22 +13,25 @@ import java.util.stream.Collectors;
 public class ElementTransformationTracker {
     private final Logger LOGGER = LoggerFactory.getLogger(ElementTransformationTracker.class);
     private final Map<TransformationEvent, Integer> elementCounter = new HashMap<>();
+    private final Set<String> affectedFiles = new HashSet<>();
 
-    public void count(TransformationEvent transformationEvent) {
+    public void count(TransformationEvent transformationEvent, String filePath) {
         elementCounter.merge(transformationEvent, 1, Integer::sum);
+        affectedFiles.add(filePath);
     }
 
     public Set<String> affectedClasses() {
-        return elementCounter
-                .keySet()
-                .stream()
-                .map(TransformationEvent::element)
-                .filter(signature -> !signature.contains("#"))
-                .collect(Collectors.toSet());
+        return affectedFiles
+                .stream().map(filePath -> {
+                    String noJavaExtensionPath = filePath.replace(".java", "");
+                    String noSrcJava = noJavaExtensionPath.substring(noJavaExtensionPath.lastIndexOf("/src/main/java/") + "/src/main/java/".length());
+                    return noSrcJava.replaceAll("/", ".");
+                }).collect(Collectors.toSet());
     }
 
     public void clear() {
         elementCounter.clear();
+        affectedFiles.clear();
     }
 
     public void report() {

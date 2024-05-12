@@ -20,6 +20,6 @@ public class RemoveMethodCallArgumentTransformation implements Transformation<Ct
     @Override
     public void apply(CtInvocation methodCall) {
         methodCall.removeArgument((CtExpression<?>) methodCall.getArguments().get(position));
-        tracker.count(new TransformationEvent("Remove argument from method call", methodSignature));
+        tracker.count(new TransformationEvent("Remove argument from method call", methodSignature), methodCall.getPosition().getFile().getAbsolutePath());
     }
 }

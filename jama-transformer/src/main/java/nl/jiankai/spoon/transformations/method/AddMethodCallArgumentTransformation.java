@@ -28,6 +28,6 @@ public class AddMethodCallArgumentTransformation<T> implements Transformation<Ct
             methodCall.addArgumentAt(position, methodCall.getFactory().Code().createLiteral(value));
         }
 
-        tracker.count(new TransformationEvent("Add argument to method call", methodSignature));
+        tracker.count(new TransformationEvent("Add argument to method call", methodSignature), methodCall.getPosition().getFile().getAbsolutePath());
     }
 }

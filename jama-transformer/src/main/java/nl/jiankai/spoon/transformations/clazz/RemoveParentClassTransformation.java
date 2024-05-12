@@ -23,7 +23,7 @@ public class RemoveParentClassTransformation implements Transformation<CtClass> 
     public void apply(CtClass ctClass) {
         if (ctClass.getSuperclass() != null && ctClass.getSuperclass().getSimpleName().equals(parentClass)) {
             LOGGER.info("Removing super class '{}' from class '{}'", parentClass, fullyQualifiedClass);
-            tracker.count(new TransformationEvent("Removing super class", fullyQualifiedClass));
+            tracker.count(new TransformationEvent("Removing super class", fullyQualifiedClass), ctClass.getPosition().getFile().getAbsolutePath());
             ctClass.setSuperclass(null);
         } else {
             ctClass
@@ -34,7 +34,7 @@ public class RemoveParentClassTransformation implements Transformation<CtClass> 
                     .ifPresent(ref -> {
                         LOGGER.info("Removing parent interface '{}' from class '{}'", parentClass, fullyQualifiedClass);
                         ctClass.removeSuperInterface(ref);
-                        tracker.count(new TransformationEvent("Removing parent interface", fullyQualifiedClass));
+                        tracker.count(new TransformationEvent("Removing parent interface", fullyQualifiedClass), ctClass.getPosition().getFile().getAbsolutePath());
                     });
         }
     }

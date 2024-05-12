@@ -34,7 +34,7 @@ public class EncapsulateAttributeTransformation implements Transformation<CtFiel
                     method -> {
                         LOGGER.info("Encapsulating variable read access '{}' with method '{}'", attributeSignature, methodSignature);
                         element.replace(element.getFactory().createInvocation(element.getTarget(), method.getReference()));
-                        tracker.count(new TransformationEvent("Encapsulate attribute", attributeQualifiedName));
+                        tracker.count(new TransformationEvent("Encapsulate attribute", attributeQualifiedName), element.getPosition().getFile().getAbsolutePath());
                     },
                     () -> LOGGER.warn("Failed to encapsulate variable access '{}' as method '{}' could not be found", attributeSignature, methodSignature)
             );
