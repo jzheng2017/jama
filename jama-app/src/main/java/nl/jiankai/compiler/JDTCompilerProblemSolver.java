@@ -76,7 +76,7 @@ public class JDTCompilerProblemSolver {
 
     private static void handleCompilationErrors(Project project, Transformer<Processor<?>> transformer, int iterations, TransformationProvider<CtClass> classTransformationProvider, TransformationProvider<CtInvocation> methodCallTransformationProvider, ElementTransformationTracker tracker, JDTBasedSpoonCompiler modelBuilder) {
         List<CategorizedProblem> problems = modelBuilder.getProblems().stream().filter(CategorizedProblem::isError).toList();
-        LOGGER.info("Number of compiler errors: {}", modelBuilder.getProblems().size());
+        LOGGER.info("Number of compiler errors: {}", problems.size());
         LOGGER.info("=============================");
         LOGGER.info("Errors (limited to {}):", ERROR_LIMIT);
         problems.stream().limit(ERROR_LIMIT).forEach(problem -> LOGGER.info(problem.toString()));

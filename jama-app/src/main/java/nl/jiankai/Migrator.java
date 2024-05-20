@@ -52,7 +52,7 @@ public class Migrator {
 
     public void migrate(GitRepository toMigrateProject, GitRepository dependencyProject, String startCommitId, String endCommitId, String newVersion) {
         long start = System.currentTimeMillis();
-        setup(toMigrateProject);
+        setup(toMigrateProject, dependencyProject);
 
         Collection<Refactoring> refactorings = getRefactorings(dependencyProject, startCommitId, endCommitId);
 
@@ -129,13 +129,16 @@ public class Migrator {
         return refactorings;
     }
 
-    private void setup(GitRepository toMigrateProject) {
+    private void setup(Project toMigrateProject, Project dependencyProject) {
         try {
             FileUtils.deleteDirectory(outputDirectory);
             FileUtils.copyDirectory(toMigrateProject.getLocalPath(), outputDirectory);
             //delete caching from older version before migration
             FileUtils.deleteQuietly(new File(outputDirectory, "spoon.classpath.tmp"));
             FileUtils.deleteQuietly(new File(outputDirectory, "spoon.classpath-app.tmp"));
+            FileUtils.deleteQuietly(new File(dependencyProject.getLocalPath(), "spoon.classpath.tmp"));
+            FileUtils.deleteQuietly(new File(dependencyProject.getLocalPath(), "spoon.classpath-app.tmp"));
+
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
