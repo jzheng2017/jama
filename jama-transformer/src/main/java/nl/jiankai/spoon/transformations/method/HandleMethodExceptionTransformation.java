@@ -51,43 +51,62 @@ public class HandleMethodExceptionTransformation implements Transformation<CtInv
                         parent = (CtStatement) parent.getParent();
                     }
 
-                    CtTry tryElement = methodCall.getFactory().createTry();
-                    if (parent instanceof CtLocalVariable<?> variableDeclaration) {
-                        CtLocalVariable cloned = variableDeclaration.clone();
-                        CtLiteral<Object> initializationValue = methodCall
-                                .getFactory()
-                                .Code()
-                                .createLiteral(
-                                        TypeUtil.getDefaultValue(variableDeclaration.getAssignment().getType().getSimpleName())
-                                );
-                        cloned.setAssignment(initializationValue);
-                        parent.insertBefore(cloned);
-                        CtAssignment<?, ?> assignment = methodCall.getFactory().createVariableAssignment(cloned.getReference(), cloned.isStatic(), variableDeclaration.getAssignment().clone());
-                        tryElement.setBody(assignment);
+                    boolean isNewTry = false;
+
+                    CtTry tryElement;
+                    final boolean isInsideTryBlock = parent.getParent().getParent() instanceof CtTry;
+
+                    if (isInsideTryBlock) {
+                        tryElement = (CtTry) parent.getParent().getParent();
                     } else {
-                        LOGGER.warn("Handling a thrown exception of non-method types is not supported! Type encountered: {}", parent);
-                        throw new IllegalStateException();
-                    }
-
-                    CtComment catchBlockComment = methodCall.getFactory().createInlineComment("handle me");
-                    CtBlock<?> catchBlock = methodCall.getFactory().createCtBlock(catchBlockComment);
-
-                    List<CtTypeReference<? extends Throwable>> alreadyCaughtExceptions = new ArrayList<>();
-
-                    while (!methodExceptions.isEmpty()) {
-                        CtTypeReference<? extends Throwable> exception = methodExceptions.poll();
-                        boolean canBeCaughtByExceptionHigherInHierarchy = Stream.concat(alreadyCaughtExceptions.stream(), methodExceptions.stream()).anyMatch(e -> e.getActualClass().isAssignableFrom(exception.getActualClass()));
-
-                        if (!canBeCaughtByExceptionHigherInHierarchy) {
-                            CtCatch ctElement = methodCall.getFactory().createCtCatch("e", exception.getActualClass(), catchBlock);
-                            tryElement.addCatcher(ctElement);
-                            alreadyCaughtExceptions.add(exception);
+                        isNewTry = true;
+                        tryElement = methodCall.getFactory().createTry();
+                        if (parent instanceof CtLocalVariable<?> variableDeclaration) {
+                            CtLocalVariable cloned = variableDeclaration.clone();
+                            CtLiteral<Object> initializationValue = methodCall
+                                    .getFactory()
+                                    .Code()
+                                    .createLiteral(
+                                            TypeUtil.getDefaultValue(variableDeclaration.getAssignment().getType().getSimpleName())
+                                    );
+                            cloned.setAssignment(initializationValue);
+                            parent.insertBefore(cloned);
+                            CtAssignment<?, ?> assignment = methodCall.getFactory().createVariableAssignment(cloned.getReference(), cloned.isStatic(), variableDeclaration.getAssignment());
+                            tryElement.setBody(assignment);
+                        } else if (parent instanceof CtAssignment<?, ?> || parent instanceof CtInvocation<?>) {
+                            tryElement.setBody(parent.clone());
+                        } else {
+                            LOGGER.warn("Handling a thrown exception of non-method types is not supported! Type encountered: {}", parent);
+                            throw new IllegalStateException();
                         }
                     }
 
-                    parent.replace(tryElement);
+                    addNewCatchBlocks(methodCall, tryElement, methodExceptions);
+
+                    if (isNewTry) {
+                        parent.replace(tryElement);
+                    }
+
                     tracker.count(new TransformationEvent("Handle exception", methodSignature), methodCall.getPosition().getFile().getAbsolutePath());
                 });
+    }
+
+    private void addNewCatchBlocks(CtInvocation methodCall, CtTry tryElement, LinkedList<CtTypeReference<? extends Throwable>> methodExceptions) {
+        CtComment catchBlockComment = methodCall.getFactory().createInlineComment("handle me");
+        CtBlock<?> catchBlock = methodCall.getFactory().createCtBlock(catchBlockComment);
+
+        List<CtTypeReference<? extends Throwable>> alreadyCaughtExceptions = new ArrayList<>(tryElement.getCatchers().stream().map(catcher -> catcher.getParameter().getType()).toList());
+
+        while (!methodExceptions.isEmpty()) {
+            CtTypeReference<? extends Throwable> exception = methodExceptions.poll();
+            boolean canBeCaughtByExceptionHigherInHierarchy = Stream.concat(alreadyCaughtExceptions.stream(), methodExceptions.stream()).anyMatch(e -> e.getActualClass().isAssignableFrom(exception.getActualClass()));
+
+            if (!canBeCaughtByExceptionHigherInHierarchy) {
+                CtCatch ctElement = methodCall.getFactory().createCtCatch("e", exception.getActualClass(), catchBlock);
+                tryElement.addCatcher(ctElement);
+                alreadyCaughtExceptions.add(exception);
+            }
+        }
     }
 
     private LinkedList<CtTypeReference<? extends Throwable>> getExceptionsFromMethod(CtMethod method, Set<String> exceptions) {
