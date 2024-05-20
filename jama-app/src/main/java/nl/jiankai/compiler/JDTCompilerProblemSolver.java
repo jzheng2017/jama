@@ -43,14 +43,13 @@ public class JDTCompilerProblemSolver {
     public static final int CANNOT_BE_RESOLVED_TO_A_TYPE = 16777218;
     public static final int UNHANDLED_EXCEPTION = 16777384;
 
-    public static void compile(File outputDirectory, Project dependencyProject, String newVersion, ElementTransformationTracker tracker) {
+    public static void compile(Project migratedProject, Project originalProject, Project dependencyProject, String newVersion, ElementTransformationTracker tracker) {
         var methodCallTransformationProvider = new SpoonTransformationProvider<CtInvocation>();
         var classTransformationProvider = new SpoonTransformationProvider<CtClass>();
         ProjectCoordinate coord = dependencyProject.getProjectVersion().coordinate();;
-        Project migratedProject = new CompositeProjectFactory().createProject(outputDirectory);
         migratedProject.upgradeDependency(new Dependency(coord.groupId(), coord.artifactId(), newVersion));
         migratedProject.install();
-        Transformer<Processor<?>> compilationTransformer = new SpoonTransformer(migratedProject, outputDirectory);
+        Transformer<Processor<?>> compilationTransformer = new SpoonTransformer(originalProject, migratedProject, migratedProject.getLocalPath());
 
         compile(migratedProject, compilationTransformer, 1, classTransformationProvider, methodCallTransformationProvider, tracker);
     }

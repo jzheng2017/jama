@@ -17,6 +17,7 @@ public class ClassReferenceOperator implements MigrationOperator {
         this.constructorTransformationProvider = constructorTransformationProvider;
         this.dependencyFactory = dependencyFactory;
     }
+
     @Override
     public void migrate(Migration migration) {
         String originalSignature = migration.mapping().original().signature();

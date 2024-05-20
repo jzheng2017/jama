@@ -44,14 +44,6 @@ public class SpoonUtil {
         return getClass(methodCall) + "#" + methodCall.getExecutable().getSimpleName() + "(" + String.join(", ", getArgumentTypes(methodCall)) + ")";
     }
 
-    public static String getClassAsString(CtInvocation<?> methodCall) {
-        return getClass(methodCall).getQualifiedName();
-    }
-
-    public static String getClassAsString(CtConstructorCall<?> ctConstructor) {
-        return ctConstructor.getType().getQualifiedName();
-    }
-
     public static String getSignatureWithoutClass(CtInvocation<?> methodCall) {
         return methodCall.getExecutable().getSimpleName() + "(" + String.join(", ", getArgumentTypes(methodCall)) + ")";
     }
@@ -80,6 +72,18 @@ public class SpoonUtil {
         return "";
     }
 
+    public static String getSignature(CtClass<?> ctClass) {
+        return ctClass.getReference().getQualifiedName();
+    }
+
+    public static String getClass(CtInvocation<?> methodCall) {
+        return methodCall.getExecutable().getDeclaringType().getQualifiedName();
+    }
+
+    public static String getSignature(CtFieldAccess fieldAccess) {
+        return fieldAccess.getVariable().getQualifiedName();
+    }
+
     private static List<String> getArgumentTypes(CtMethod<?> method) {
         return method.getParameters().stream().map(c -> c.getReference().getType().getSimpleName()).toList();
     }
@@ -88,19 +92,7 @@ public class SpoonUtil {
         return methodCall.getExecutable().getParameters().stream().map(CtTypeReference::getSimpleName).toList();
     }
 
-    private static CtTypeReference<?> getClass(CtMethod<?> method) {
-        return method.getDeclaringType().getReference();
-    }
-
-    public static String getSignature(CtClass<?> ctClass) {
-        return ctClass.getReference().getQualifiedName();
-    }
-
-    private static CtTypeReference<?> getClass(CtInvocation<?> methodCall) {
-        return methodCall.getExecutable().getDeclaringType();
-    }
-
-    public static String getSignature(CtFieldAccess fieldAccess) {
-        return fieldAccess.getVariable().getQualifiedName();
+    private static String getClass(CtMethod<?> method) {
+        return method.getDeclaringType().getReference().getQualifiedName();
     }
 }

@@ -26,7 +26,7 @@ public class SpoonMethodCallTransformer implements ElementHandler<Processor<?>> 
 
                 //if changes happened to the class then the reference changed, so it must be updated
                 transformationProvider
-                        .get(SpoonUtil.getClassAsString(methodCall))
+                        .get(SpoonUtil.getClass(methodCall))
                         .forEach(transformation -> transformation.apply(methodCall));
             }
         };

@@ -3,8 +3,10 @@ package nl.jiankai;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import nl.jiankai.api.*;
 import nl.jiankai.api.project.GitRepository;
+import nl.jiankai.api.project.Project;
 import nl.jiankai.api.storage.CacheService;
 import nl.jiankai.impl.JacksonSerializationService;
+import nl.jiankai.impl.project.CompositeProjectFactory;
 import nl.jiankai.impl.storage.MultiFileCacheService;
 import nl.jiankai.migration.MethodMigrationPathEvaluatorImpl;
 import nl.jiankai.operators.*;
@@ -88,13 +90,15 @@ public class Migrator {
             LOGGER.warn("The project has errors", e);
         }
 
+        Project migratedProject = new CompositeProjectFactory().createProject(outputDirectory);
+        compile(migratedProject, toMigrateProject, dependencyProject, newVersion, tracker);
+        testAffectedClasses(tracker, migratedProject);
+
         long end = System.currentTimeMillis();
-        compile(outputDirectory, dependencyProject, newVersion, tracker);
-        testAffectedClasses(tracker, toMigrateProject);
         LOGGER.info("It took {} seconds to migrate {}", (end - start) / 1000, toMigrateProject.getId());
     }
 
-    private void testAffectedClasses(ElementTransformationTracker tracker, GitRepository migrationProject) {
+    private void testAffectedClasses(ElementTransformationTracker tracker, Project migrationProject) {
         Set<String> affectedClasses = tracker.affectedClasses();
         LOGGER.info("{} classes affected", affectedClasses.size());
         if (!affectedClasses.isEmpty()) {

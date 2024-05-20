@@ -22,12 +22,18 @@ import static nl.jiankai.spoon.SpoonUtil.*;
 
 public class SpoonTransformer implements Transformer<Processor<?>> {
     private static final Logger LOGGER = LoggerFactory.getLogger(SpoonTransformer.class);
-    private final Project project;
+    private final Project originalProject;
+    private final Project transformedProject;
     private final File targetDirectory;
     private final List<Processor<?>> processors = new ArrayList<>();
 
-    public SpoonTransformer(Project project, File targetDirectory) {
-        this.project = project;
+    public SpoonTransformer(Project transformedProject, File targetDirectory) {
+        this(transformedProject, transformedProject, targetDirectory);
+    }
+
+    public SpoonTransformer(Project originalProject, Project transformedProject, File targetDirectory) {
+        this.originalProject = originalProject;
+        this.transformedProject = transformedProject;
         this.targetDirectory = targetDirectory;
     }
 
@@ -43,7 +49,7 @@ public class SpoonTransformer implements Transformer<Processor<?>> {
 
     @Override
     public void run() {
-        Launcher launcher = getLauncher(project);
+        Launcher launcher = getLauncher(transformedProject);
         processors.forEach(launcher::addProcessor);
         File processedSourceDirectory = new File(targetDirectory, Paths.get("src", "main", "java").toString());
         launcher.setSourceOutputDirectory(processedSourceDirectory);
@@ -53,7 +59,7 @@ public class SpoonTransformer implements Transformer<Processor<?>> {
     }
 
     private void moveTestClassesFromSourceToTest(File processedSourceDirectory) {
-        List<File> sourceDirectories = project.getSourceDirectories().stream().toList();
+        List<File> sourceDirectories = originalProject.getSourceDirectories().stream().toList();
 
         if (sourceDirectories.size() != 1) {
             LOGGER.error("Invalid source directories count: {}", sourceDirectories.size());
