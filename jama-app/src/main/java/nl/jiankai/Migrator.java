@@ -168,7 +168,7 @@ public class Migrator {
         Set<RefactoringType> refactoringTypes = migration.refactorings();
 
         if (refactoringTypes.stream().anyMatch(RefactoringType::isMethodParameterRefactoring)) {
-            var argumentsOperator = new MethodCallArgumentOperator(transformationProvider, tracker);
+            var argumentsOperator = new InvocationArgumentOperator(transformationProvider, tracker);
             argumentsOperator.migrate(migration);
         }
 

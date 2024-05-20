@@ -52,6 +52,7 @@ public class JDTCompilerProblemSolver {
         Transformer<Processor<?>> compilationTransformer = new SpoonTransformer(originalProject, migratedProject, migratedProject.getLocalPath());
 
         compile(migratedProject, compilationTransformer, 1, classTransformationProvider, methodCallTransformationProvider, tracker);
+        tracker.report();
     }
 
     public static void compile(Project project, Transformer<Processor<?>> transformer, int iterations, TransformationProvider<CtClass> classTransformationProvider, TransformationProvider<CtInvocation> methodCallTransformationProvider, ElementTransformationTracker tracker) {
@@ -71,7 +72,6 @@ public class JDTCompilerProblemSolver {
         } catch (ModelBuildingException ignored) {
             handleCompilationErrors(project, transformer, iterations, classTransformationProvider, methodCallTransformationProvider, tracker, modelBuilder);
         }
-        tracker.report();
     }
 
     private static void handleCompilationErrors(Project project, Transformer<Processor<?>> transformer, int iterations, TransformationProvider<CtClass> classTransformationProvider, TransformationProvider<CtInvocation> methodCallTransformationProvider, ElementTransformationTracker tracker, JDTBasedSpoonCompiler modelBuilder) {

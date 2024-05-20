@@ -15,12 +15,12 @@ import java.util.stream.Collectors;
 
 import static nl.jiankai.util.TypeUtil.getDefaultValue;
 
-public class MethodCallArgumentOperator implements MigrationOperator {
-    private static final Logger LOGGER = LoggerFactory.getLogger(MethodCallArgumentOperator.class);
+public class InvocationArgumentOperator implements MigrationOperator {
+    private static final Logger LOGGER = LoggerFactory.getLogger(InvocationArgumentOperator.class);
     private final TransformationProvider<CtInvocation> transformationProvider;
     private final ElementTransformationTracker tracker;
 
-    public MethodCallArgumentOperator(TransformationProvider<CtInvocation> transformationProvider, ElementTransformationTracker tracker) {
+    public InvocationArgumentOperator(TransformationProvider<CtInvocation> transformationProvider, ElementTransformationTracker tracker) {
         this.transformationProvider = transformationProvider;
         this.tracker = tracker;
     }

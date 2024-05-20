@@ -111,7 +111,9 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             return apr.getOperationBefore().getVisibility() == Visibility.PUBLIC;
         } else if (r instanceof RemoveParameterRefactoring rpr) {
             return rpr.getOperationBefore().getVisibility() == Visibility.PUBLIC;
-        } else if (r instanceof ChangeVariableTypeRefactoring cvtr) {
+        } else if (r instanceof ChangeVariableTypeRefactoring cvtr && cvtr.getOperationBefore() instanceof UMLOperation ob) { // constructor or method
+            return ob.getVisibility() == Visibility.PUBLIC;
+        }else if (r instanceof ChangeVariableTypeRefactoring cvtr) { // class fields
             return cvtr.getOriginalVariable().getModifiers().stream().anyMatch(modifier -> modifier.getKeyword().equals("public"));
         } else if (r instanceof RenameOperationRefactoring ror) {
             return ror.getOriginalOperation().getVisibility() == Visibility.PUBLIC;

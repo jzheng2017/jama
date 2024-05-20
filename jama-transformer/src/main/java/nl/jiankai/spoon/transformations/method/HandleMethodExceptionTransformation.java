@@ -4,10 +4,14 @@ import nl.jiankai.ElementTransformationTracker;
 import nl.jiankai.api.Transformation;
 import nl.jiankai.api.TransformationEvent;
 import nl.jiankai.spoon.SpoonUtil;
+import nl.jiankai.util.TypeUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import spoon.reflect.CtModel;
 import spoon.reflect.code.*;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.reference.CtTypeReference;
+import spoon.reflect.visitor.Query;
 import spoon.reflect.visitor.filter.TypeFilter;
 
 import java.util.ArrayList;
@@ -18,6 +22,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class HandleMethodExceptionTransformation implements Transformation<CtInvocation> {
+    private static final Logger LOGGER = LoggerFactory.getLogger(HandleMethodExceptionTransformation.class);
     private final CtModel dependencyModel;
     private final ElementTransformationTracker tracker;
     private final Set<String> exceptions;
@@ -47,7 +52,23 @@ public class HandleMethodExceptionTransformation implements Transformation<CtInv
                     }
 
                     CtTry tryElement = methodCall.getFactory().createTry();
-                    tryElement.setBody(parent.clone());
+                    if (parent instanceof CtLocalVariable<?> variableDeclaration) {
+                        CtLocalVariable cloned = variableDeclaration.clone();
+                        CtLiteral<Object> initializationValue = methodCall
+                                .getFactory()
+                                .Code()
+                                .createLiteral(
+                                        TypeUtil.getDefaultValue(variableDeclaration.getAssignment().getType().getSimpleName())
+                                );
+                        cloned.setAssignment(initializationValue);
+                        parent.insertBefore(cloned);
+                        CtAssignment<?, ?> assignment = methodCall.getFactory().createVariableAssignment(cloned.getReference(), cloned.isStatic(), variableDeclaration.getAssignment().clone());
+                        tryElement.setBody(assignment);
+                    } else {
+                        LOGGER.warn("Handling a thrown exception of non-method types is not supported! Type encountered: {}", parent);
+                        throw new IllegalStateException();
+                    }
+
                     CtComment catchBlockComment = methodCall.getFactory().createInlineComment("handle me");
                     CtBlock<?> catchBlock = methodCall.getFactory().createCtBlock(catchBlockComment);
 
