@@ -32,7 +32,7 @@ public class FileUtil {
         return FileUtils
                 .listFiles(directory, FileFilterUtils.suffixFileFilter(suffix), TrueFileFilter.INSTANCE)
                 .stream()
-                .filter(file -> Objects.equals(file.getName(), fileName))
+                .filter(file -> fileName.isBlank() || Objects.equals(file.getName(), fileName))
                 .toList();
     }
 

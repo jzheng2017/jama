@@ -64,24 +64,32 @@ public class JDTCompilerProblemSolver {
         JDTBasedSpoonCompiler modelBuilder = (JDTBasedSpoonCompiler) launcher.getModelBuilder();
         try {
             modelBuilder.build();
-            LOGGER.info("Compilation finished with zero errors");
+            if (!modelBuilder.getProblems().isEmpty()) {
+                handleCompilationErrors(project, transformer, iterations, classTransformationProvider, methodCallTransformationProvider, tracker, modelBuilder);
+            } else {
+                LOGGER.info("Compilation finished with zero errors");
+            }
         } catch (ModelBuildingException ignored) {
-            List<CategorizedProblem> problems = modelBuilder.getProblems().stream().filter(CategorizedProblem::isError).toList();
-            LOGGER.info("Number of compiler errors: {}", modelBuilder.getProblems().size());
-            LOGGER.info("=============================");
-            LOGGER.info("Errors (limited to {}):", ERROR_LIMIT);
-            problems.stream().limit(ERROR_LIMIT).forEach(problem -> LOGGER.info(problem.toString()));
-            LOGGER.info("=============================");
-            problems.forEach(problem -> solve(problem, classTransformationProvider, methodCallTransformationProvider, tracker));
-            ElementHandler<Processor<?>> classTransformer = new SpoonClassTransformer(classTransformationProvider);
-            ElementHandler<Processor<?>> methodCallTransformer = new SpoonMethodCallTransformer(methodCallTransformationProvider);
-            transformer.addProcessor(classTransformer.handle());
-            transformer.addProcessor(methodCallTransformer.handle());
-            transformer.run();
-            transformer.reset();
-            compile(project, transformer, iterations + 1, classTransformationProvider, methodCallTransformationProvider, tracker);
+            handleCompilationErrors(project, transformer, iterations, classTransformationProvider, methodCallTransformationProvider, tracker, modelBuilder);
         }
         tracker.report();
+    }
+
+    private static void handleCompilationErrors(Project project, Transformer<Processor<?>> transformer, int iterations, TransformationProvider<CtClass> classTransformationProvider, TransformationProvider<CtInvocation> methodCallTransformationProvider, ElementTransformationTracker tracker, JDTBasedSpoonCompiler modelBuilder) {
+        List<CategorizedProblem> problems = modelBuilder.getProblems().stream().filter(CategorizedProblem::isError).toList();
+        LOGGER.info("Number of compiler errors: {}", modelBuilder.getProblems().size());
+        LOGGER.info("=============================");
+        LOGGER.info("Errors (limited to {}):", ERROR_LIMIT);
+        problems.stream().limit(ERROR_LIMIT).forEach(problem -> LOGGER.info(problem.toString()));
+        LOGGER.info("=============================");
+        problems.forEach(problem -> solve(problem, classTransformationProvider, methodCallTransformationProvider, tracker));
+        ElementHandler<Processor<?>> classTransformer = new SpoonClassTransformer(classTransformationProvider);
+        ElementHandler<Processor<?>> methodCallTransformer = new SpoonMethodCallTransformer(methodCallTransformationProvider);
+        transformer.addProcessor(classTransformer.handle());
+        transformer.addProcessor(methodCallTransformer.handle());
+        transformer.run();
+        transformer.reset();
+        compile(project, transformer, iterations + 1, classTransformationProvider, methodCallTransformationProvider, tracker);
     }
 
     private static void solve(CategorizedProblem categorizedProblem, TransformationProvider<CtClass> classTransformationProvider, TransformationProvider<CtInvocation> methodCallTransformationProvider, ElementTransformationTracker tracker) {

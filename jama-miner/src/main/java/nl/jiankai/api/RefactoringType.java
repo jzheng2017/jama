@@ -39,7 +39,17 @@ public enum RefactoringType {
         return Set.of(
                 MOVE_CLASS,
                 METHOD_NAME,
-                MOVE_METHOD
+                MOVE_METHOD,
+                CLASS_NAME,
+                MOVE_RENAME_CLASS
+        ).contains(this);
+    }
+
+    public boolean isClassReferenceRefactoring() {
+        return Set.of(
+                MOVE_CLASS,
+                CLASS_NAME,
+                MOVE_RENAME_CLASS
         ).contains(this);
     }
 

@@ -21,15 +21,24 @@ public class ChangeMethodCallReferenceTransformation implements Transformation<C
 
     @Override
     public void apply(CtInvocation methodCall) {
+        String methodSignature = this.methodSignature;
+
+        if (methodSignature.contains("#")) {
+            methodSignature = methodSignature.substring(0, methodSignature.lastIndexOf("#"));
+        }
+
         CtTypeReference<?> ref =
                 dependencyFactory
                         .Type()
-                        .get(methodSignature.substring(0, methodSignature.lastIndexOf("#")))
+                        .get(methodSignature)
                         .getReference();
 
         methodCall.getExecutable().setDeclaringType(ref);
-        CtTypeAccess target = (CtTypeAccess<?>) methodCall.getTarget();
-        target.setAccessedType(ref);
+        if (methodCall.getTarget() instanceof CtTypeAccess target) { //static method
+            target.setAccessedType(ref);
+        } else {
+            methodCall.getTarget().setType(ref);
+        }
         tracker.count(new TransformationEvent("Changing method call reference", methodSignature), methodCall.getPosition().getFile().getAbsolutePath());
     }
 }

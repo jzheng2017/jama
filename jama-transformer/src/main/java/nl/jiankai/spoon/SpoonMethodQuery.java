@@ -65,10 +65,6 @@ public class SpoonMethodQuery implements MethodQuery {
     }
 
     private Launcher getLauncher() {
-        return switch (project.getProjectType()) {
-            case ProjectType.MAVEN ->
-                    new MavenLauncher(project.getLocalPath().getAbsolutePath(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE);
-            case UNKNOWN -> throw new UnsupportedOperationException("Unsupported project type");
-        };
+        return SpoonUtil.getLauncher(project);
     }
 }

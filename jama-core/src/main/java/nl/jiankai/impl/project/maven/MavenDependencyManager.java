@@ -28,6 +28,7 @@ public class MavenDependencyManager implements ProjectDependencyManager {
             MavenXpp3Reader reader = new MavenXpp3Reader();
             Model model = reader.read(new FileInputStream(pomFile));
             Stream<org.apache.maven.model.Dependency> dependencyManagement = Stream.empty();
+            
             if (model.getDependencyManagement() != null) {
                 dependencyManagement = model.getDependencyManagement().getDependencies().stream();
             }

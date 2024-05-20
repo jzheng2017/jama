@@ -41,7 +41,7 @@ public class RefactoringMinerImpl implements RefactoringMiner {
                             .stream()
                             .filter(r -> {
                                 RefactoringType refactoringType = convertRefactoringType(r.getRefactoringType());
-                                return refactoringType != RefactoringType.UNKNOWN && (refactoringTypes.isEmpty() || refactoringTypes.contains(refactoringType)) && isPublic(r);
+                                return refactoringType != RefactoringType.UNKNOWN && (refactoringTypes.isEmpty() || refactoringTypes.contains(refactoringType)) && isPublic(r) && !inTestDirectory(r);
                             })
                             .map(r -> new Refactoring(commitId, sequence, getBeforeElement(r), getAfterElement(r), convertRefactoringType(r.getRefactoringType()), getContext(r)))
                             .toList();
@@ -96,6 +96,12 @@ public class RefactoringMinerImpl implements RefactoringMiner {
         } catch (Exception e) {
             throw new IllegalArgumentException("Something went wrong with the repository '%s'".formatted(gitRepository.getId()), e);
         }
+    }
+
+    private boolean inTestDirectory(org.refactoringminer.api.Refactoring r) {
+        String filePath = getBeforeFilePath(r);
+
+        return filePath.startsWith("src/test") || filePath.startsWith("/src/test");
     }
 
     private boolean isPublic(org.refactoringminer.api.Refactoring r) {

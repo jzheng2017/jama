@@ -22,9 +22,10 @@ public class ChangeMethodCallReferenceOperator implements MigrationOperator {
     public void migrate(Migration migration) {
         Set<RefactoringType> refactoringTypes = migration.refactorings();
         String originalSignature = migration.mapping().original().signature();
+        String newSignature = migration.end().target().signature();
 
         if (refactoringTypes.contains(RefactoringType.MOVE_METHOD)) {
-            transformationProvider.add(originalSignature, new ChangeMethodCallReferenceTransformation(tracker, originalSignature, dependencyFactory));
+            transformationProvider.add(originalSignature, new ChangeMethodCallReferenceTransformation(tracker, newSignature, dependencyFactory));
         }
 
         if (refactoringTypes.contains(RefactoringType.METHOD_NAME)) {

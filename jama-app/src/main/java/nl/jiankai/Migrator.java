@@ -9,10 +9,7 @@ import nl.jiankai.impl.storage.MultiFileCacheService;
 import nl.jiankai.migration.MethodMigrationPathEvaluatorImpl;
 import nl.jiankai.operators.*;
 import nl.jiankai.refactoringminer.RefactoringMinerImpl;
-import nl.jiankai.spoon.SpoonClassTransformer;
-import nl.jiankai.spoon.SpoonMethodCallTransformer;
-import nl.jiankai.spoon.FieldAccessTransformer;
-import nl.jiankai.spoon.SpoonTransformer;
+import nl.jiankai.spoon.*;
 import nl.jiankai.spoon.transformations.SpoonTransformationProvider;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
@@ -24,6 +21,7 @@ import spoon.reflect.code.CtFieldAccess;
 import spoon.reflect.code.CtInvocation;
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.factory.Factory;
+import spoon.reflect.reference.CtTypeReference;
 
 import java.io.File;
 import java.io.IOException;
@@ -67,18 +65,21 @@ public class Migrator {
         var methodCallTransformationProvider = new SpoonTransformationProvider<CtInvocation>();
         var fieldAccessTransformationProvider = new SpoonTransformationProvider<CtFieldAccess>();
         var classTransformationProvider = new SpoonTransformationProvider<CtClass>();
+        var referenceTransformationProvider = new SpoonTransformationProvider<CtTypeReference>();
         var methodCallTransformer = new SpoonMethodCallTransformer(methodCallTransformationProvider);
         var statementTransformer = new FieldAccessTransformer(fieldAccessTransformationProvider);
         var classTransformer = new SpoonClassTransformer(classTransformationProvider);
+        var referenceTransformer = new SpoonReferenceTransformer(referenceTransformationProvider);
 
         var migrationPathEvaluator = new MethodMigrationPathEvaluatorImpl();
 
         migrationPathEvaluator
                 .evaluate(refactorings)
-                .forEach(migration -> migrate(migration, methodCallTransformationProvider, fieldAccessTransformationProvider, tracker, dependencyLauncher.getFactory()));
+                .forEach(migration -> migrate(migration, methodCallTransformationProvider, fieldAccessTransformationProvider, referenceTransformationProvider, tracker, dependencyLauncher.getFactory()));
         transformer.addProcessor(methodCallTransformer.handle());
         transformer.addProcessor(statementTransformer.handle());
         transformer.addProcessor(classTransformer.handle());
+        transformer.addProcessor(referenceTransformer.handle());
 
         try {
             transformer.run();
@@ -128,14 +129,27 @@ public class Migrator {
         try {
             FileUtils.deleteDirectory(outputDirectory);
             FileUtils.copyDirectory(toMigrateProject.getLocalPath(), outputDirectory);
+            //delete caching from older version before migration
+            FileUtils.deleteQuietly(new File(outputDirectory, "spoon.classpath.tmp"));
+            FileUtils.deleteQuietly(new File(outputDirectory, "spoon.classpath-app.tmp"));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private void migrate(Migration migration, TransformationProvider<CtInvocation> methodCallTransformationProvider, TransformationProvider<CtFieldAccess> fieldAccessTransformationProvider, ElementTransformationTracker tracker, Factory dependencyFactory) {
+    private void migrate(Migration migration, TransformationProvider<CtInvocation> methodCallTransformationProvider, TransformationProvider<CtFieldAccess> fieldAccessTransformationProvider, TransformationProvider<CtTypeReference> constructorTransformationProvider , ElementTransformationTracker tracker, Factory dependencyFactory) {
         handleAttributeMigrations(migration, fieldAccessTransformationProvider, tracker);
         handleMethodMigrations(migration, methodCallTransformationProvider, tracker, dependencyFactory);
+        handleClassMigrations(migration, methodCallTransformationProvider, constructorTransformationProvider, tracker, dependencyFactory);
+    }
+
+    private void handleClassMigrations(Migration migration, TransformationProvider<CtInvocation> methodCallTransformationProvider, TransformationProvider<CtTypeReference> constructorTransformationProvider, ElementTransformationTracker tracker, Factory dependencyFactory) {
+        Set<RefactoringType> refactoringTypes = migration.refactorings();
+
+        if (refactoringTypes.stream().anyMatch(RefactoringType::isClassReferenceRefactoring)) {
+            var clazz = new ClassReferenceOperator(tracker, constructorTransformationProvider, dependencyFactory);
+            clazz.migrate(migration);
+        }
     }
 
     private static void handleAttributeMigrations(Migration migration, TransformationProvider<CtFieldAccess> fieldAccessTransformationProvider, ElementTransformationTracker tracker) {

@@ -6,9 +6,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import spoon.Launcher;
 import spoon.MavenLauncher;
+import spoon.reflect.code.CtConstructorCall;
 import spoon.reflect.code.CtFieldAccess;
 import spoon.reflect.code.CtInvocation;
 import spoon.reflect.declaration.CtClass;
+import spoon.reflect.declaration.CtConstructor;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.reference.CtTypeReference;
@@ -23,17 +25,12 @@ public class SpoonUtil {
     public static Launcher getLauncher(Project project) {
         Launcher launcher = switch (project.getProjectType()) {
             case ProjectType.MAVEN ->
-                    new MavenLauncher(project.getLocalPath().getAbsolutePath(), MavenLauncher.SOURCE_TYPE.APP_SOURCE);
+                    new MavenLauncher(project.getLocalPath().getAbsolutePath(), MavenLauncher.SOURCE_TYPE.ALL_SOURCE);
             case UNKNOWN -> throw new UnsupportedOperationException("Unsupported project type");
         };
 
+//        launcher.getEnvironment().setPrettyPrinterCreator(() -> new SniperJavaPrettyPrinter(launcher.getEnvironment()));
         launcher.getEnvironment().setAutoImports(true);
-        launcher.getEnvironment()
-                .setPrettyPrinterCreator(() -> {
-                    DefaultJavaPrettyPrinter printer = new SniperJavaPrettyPrinter(launcher.getEnvironment());
-                    printer.setIgnoreImplicit(false);
-                    return printer;
-                });
         launcher.getEnvironment().setNoClasspath(true); //which allows us to suppress compilation errors (no exception thrown)
 
         return launcher;
@@ -45,6 +42,14 @@ public class SpoonUtil {
 
     public static String getSignature(CtInvocation<?> methodCall) {
         return getClass(methodCall) + "#" + methodCall.getExecutable().getSimpleName() + "(" + String.join(", ", getArgumentTypes(methodCall)) + ")";
+    }
+
+    public static String getClassAsString(CtInvocation<?> methodCall) {
+        return getClass(methodCall).getQualifiedName();
+    }
+
+    public static String getClassAsString(CtConstructorCall<?> ctConstructor) {
+        return ctConstructor.getType().getQualifiedName();
     }
 
     public static String getSignatureWithoutClass(CtInvocation<?> methodCall) {
@@ -87,12 +92,12 @@ public class SpoonUtil {
         return method.getDeclaringType().getReference();
     }
 
-    private static CtTypeReference<?> getClass(CtInvocation<?> methodCall) {
-        return methodCall.getExecutable().getDeclaringType();
-    }
-
     public static String getSignature(CtClass<?> ctClass) {
         return ctClass.getReference().getQualifiedName();
+    }
+
+    private static CtTypeReference<?> getClass(CtInvocation<?> methodCall) {
+        return methodCall.getExecutable().getDeclaringType();
     }
 
     public static String getSignature(CtFieldAccess fieldAccess) {

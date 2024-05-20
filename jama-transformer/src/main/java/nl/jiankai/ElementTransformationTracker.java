@@ -22,11 +22,14 @@ public class ElementTransformationTracker {
 
     public Set<String> affectedClasses() {
         return affectedFiles
-                .stream().map(filePath -> {
+                .stream()
+                .filter(filePath -> filePath.contains("/src/main/java"))
+                .map(filePath -> {
                     String noJavaExtensionPath = filePath.replace(".java", "");
                     String noSrcJava = noJavaExtensionPath.substring(noJavaExtensionPath.lastIndexOf("/src/main/java/") + "/src/main/java/".length());
                     return noSrcJava.replaceAll("/", ".");
-                }).collect(Collectors.toSet());
+                })
+                .collect(Collectors.toSet());
     }
 
     public void clear() {
