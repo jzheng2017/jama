@@ -1,6 +1,8 @@
 package nl.jiankai;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jiankai.api.*;
 import nl.jiankai.api.project.GitRepository;
 import nl.jiankai.api.project.Project;

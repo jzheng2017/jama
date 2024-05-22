@@ -28,10 +28,10 @@ public class JGitRepositoryFactory implements ProjectFactory {
         }
     }
 
-    public JGitRepository createProject(String repositoryUrl, File repositoryCloneDirectory) {
+    public GitRepository createProject(String repositoryUrl, File repositoryCloneDirectory) {
         if (repositoryCloneDirectory.exists()) {
             LOGGER.info("Git repository '{}' already exists locally", repositoryUrl);
-            return (JGitRepository) createProject(repositoryCloneDirectory);
+            return createProject(repositoryCloneDirectory);
         }
 
         if (validGitRepository(repositoryUrl)) {
@@ -41,7 +41,7 @@ public class JGitRepositoryFactory implements ProjectFactory {
                     .setDirectory(repositoryCloneDirectory)
                     .call()
             ) {
-                return (JGitRepository) createProject(repositoryCloneDirectory);
+                return createProject(repositoryCloneDirectory);
             } catch (GitAPIException e) {
                 LOGGER.warn("Could not clone the git repository: {}", e.getMessage());
                 throw new GitOperationException("Could not clone the git repository", e);

@@ -77,7 +77,11 @@ public class SpoonUtil {
     }
 
     public static String getClass(CtInvocation<?> methodCall) {
-        return methodCall.getExecutable().getDeclaringType().getQualifiedName();
+        if (methodCall.getExecutable().getDeclaringType() != null) {
+            return methodCall.getExecutable().getDeclaringType().getQualifiedName();
+        } else {
+            return methodCall.getTarget().getType().getQualifiedName();
+        }
     }
 
     public static String getSignature(CtFieldAccess fieldAccess) {

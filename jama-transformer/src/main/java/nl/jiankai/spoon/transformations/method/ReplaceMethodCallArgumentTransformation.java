@@ -27,7 +27,6 @@ public class ReplaceMethodCallArgumentTransformation<T> implements Transformatio
     public void apply(CtInvocation methodCall) {
         CtExpression<?> expression = (CtExpression<?>) methodCall.getArguments().get(position);
         expression.replace(methodCall.getFactory().Code().createLiteral(value));
-        LOGGER.info("Replace method call {} argument at position {} with {}", SpoonUtil.getSignature(methodCall), position, value);
         tracker.count(new TransformationEvent("Replacing argument method call", methodSignature), methodCall.getPosition().getFile().getAbsolutePath());
     }
 }

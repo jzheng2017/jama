@@ -18,6 +18,7 @@ public class ElementTransformationTracker {
     public void count(TransformationEvent transformationEvent, String filePath) {
         elementCounter.merge(transformationEvent, 1, Integer::sum);
         affectedFiles.add(filePath);
+        LOGGER.info("Event {} at {}", transformationEvent, filePath);
     }
 
     public Set<String> affectedClasses() {
