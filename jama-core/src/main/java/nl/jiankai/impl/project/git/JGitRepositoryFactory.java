@@ -36,7 +36,7 @@ public class JGitRepositoryFactory implements ProjectFactory {
 
         if (validGitRepository(repositoryUrl)) {
             try (Git git = Git.cloneRepository()
-                    .setTimeout(30)
+                    .setTimeout(10)
                     .setURI(repositoryUrl)
                     .setDirectory(repositoryCloneDirectory)
                     .call()

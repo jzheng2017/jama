@@ -38,7 +38,7 @@ public class InvocationArgumentOperator implements MigrationOperator {
         Set<String> newSet = new HashSet<>(after);
         List<String> current = new ArrayList<>(beforeWithUpdatedNames);
 
-        String currentSignature = migration.mapping().original().signature();
+        String currentSignature = SignatureUtil.getFirstSignature(migration.mapping().original().signature(), tracker);
 
         addArguments(newSet, oldSet, afterParameters, currentSignature, current);
         removeArguments(oldSet, newSet, current, currentSignature);

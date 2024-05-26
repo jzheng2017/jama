@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import spoon.Launcher;
 import spoon.compiler.ModelBuildingException;
 import spoon.processing.Processor;
+import spoon.reflect.CtModel;
 import spoon.reflect.code.CtFieldAccess;
 import spoon.reflect.code.CtInvocation;
 import spoon.reflect.declaration.CtClass;
@@ -43,47 +44,31 @@ public class Migrator {
         this.outputDirectory = outputDirectory;
     }
 
-    @JsonIgnoreProperties({"id"})
-    private record RefactoringCollection(String startCommit, String endCommit,
-                                         Collection<Refactoring> refactorings) implements Identifiable {
-        @Override
-        public String getId() {
-            return startCommit + ":" + endCommit;
-        }
-    }
+    public record Statistics(int affectedClasses, long changes) {}
 
-    public void migrate(GitRepository toMigrateProject, GitRepository dependencyProject, String startCommitId, String endCommitId, String newVersion) {
+    public Statistics migrate(Project toMigrateProject, Project dependencyProject, Collection<Migration> migrations, Launcher dependencyLauncher, String newVersion) {
         long start = System.currentTimeMillis();
         setup(toMigrateProject, dependencyProject);
 
-        Collection<Refactoring> refactorings = getRefactorings(dependencyProject, startCommitId, endCommitId);
-
-        LOGGER.info("Found {} refactorings", refactorings.size());
-
         Transformer<Processor<?>> transformer = new SpoonTransformer(toMigrateProject, outputDirectory);
-        Launcher dependencyLauncher = getLauncher(dependencyProject);
-        dependencyLauncher.buildModel();
-        LOGGER.info("{} build sucessfully", dependencyProject.getId());
 
         var tracker = new ElementTransformationTracker();
+
+        collectClassMappings(migrations, tracker);
         var methodCallTransformationProvider = new SpoonTransformationProvider<CtInvocation>();
         var fieldAccessTransformationProvider = new SpoonTransformationProvider<CtFieldAccess>();
         var classTransformationProvider = new SpoonTransformationProvider<CtClass>();
         var referenceTransformationProvider = new SpoonTransformationProvider<CtTypeReference>();
-        var methodCallTransformer = new SpoonMethodCallTransformer(methodCallTransformationProvider);
+        var methodCallTransformer = new SpoonMethodCallTransformer(methodCallTransformationProvider, tracker);
         var statementTransformer = new FieldAccessTransformer(fieldAccessTransformationProvider);
         var classTransformer = new SpoonClassTransformer(classTransformationProvider);
         var referenceTransformer = new SpoonReferenceTransformer(referenceTransformationProvider);
 
-        var migrationPathEvaluator = new MethodMigrationPathEvaluatorImpl();
-
-        migrationPathEvaluator
-                .evaluate(refactorings)
-                .forEach(migration -> migrate(migration, methodCallTransformationProvider, fieldAccessTransformationProvider, referenceTransformationProvider, tracker, dependencyLauncher.getFactory()));
+        migrations.forEach(migration -> migrate(migration, methodCallTransformationProvider, fieldAccessTransformationProvider, referenceTransformationProvider, tracker, dependencyLauncher.getFactory()));
         transformer.addProcessor(methodCallTransformer.handle());
         transformer.addProcessor(statementTransformer.handle());
         transformer.addProcessor(classTransformer.handle());
-        transformer.addProcessor(referenceTransformer.handle());
+        transformer.addProcessor(referenceTransformer.handle()); //it's important that class references are migrated last as otherwise other code elements that reference these class references can not be matched anymore
 
         try {
             transformer.run();
@@ -98,6 +83,23 @@ public class Migrator {
 
         long end = System.currentTimeMillis();
         LOGGER.info("It took {} seconds to migrate {}", (end - start) / 1000, toMigrateProject.getId());
+        return new Statistics(tracker.affectedClasses().size(), tracker.changes());
+    }
+
+    private void collectClassMappings(Collection<Migration> migrations, ElementTransformationTracker tracker) {
+        migrations.forEach(migration -> {
+            Migration current = migration;
+
+            while (current != null) {
+                if (current.mapping().refactoringType().isClassReferenceRefactoring()) {
+                    tracker.map(current.mapping().original().signature(), current.mapping().target().signature());
+                }
+
+                current = current.next();
+            }
+
+
+        });
     }
 
     private void testAffectedClasses(ElementTransformationTracker tracker, Project migrationProject) {
@@ -110,25 +112,6 @@ public class Migrator {
                     .collect(Collectors.toSet());
             migrationProject.test(testClassesEquivalent);
         }
-    }
-
-    private static Collection<Refactoring> getRefactorings(GitRepository dependencyProject, String startCommitId, String endCommitId) {
-        RefactoringMiner refactoringMiner = new RefactoringMinerImpl();
-        Collection<Refactoring> refactorings;
-        CacheService<RefactoringCollection> cacheService = new MultiFileCacheService<>("/home/jiankai/test/cache", new JacksonSerializationService(), RefactoringCollection.class);
-
-        if (cacheService.isCached(startCommitId + ":" + endCommitId)) {
-            refactorings = cacheService
-                    .get(startCommitId + ":" + endCommitId)
-                    .orElseGet(() -> new RefactoringCollection(startCommitId, endCommitId, refactoringMiner.detectRefactoringBetweenCommit(dependencyProject, startCommitId, endCommitId)))
-                    .refactorings();
-        } else {
-            refactorings = refactoringMiner.detectRefactoringBetweenCommit(dependencyProject, startCommitId, endCommitId);
-            RefactoringCollection refactoringCollection = new RefactoringCollection(startCommitId, endCommitId, refactorings);
-            cacheService.write(refactoringCollection);
-        }
-
-        return refactorings;
     }
 
     private void setup(Project toMigrateProject, Project dependencyProject) {
@@ -146,7 +129,7 @@ public class Migrator {
         }
     }
 
-    private void migrate(Migration migration, TransformationProvider<CtInvocation> methodCallTransformationProvider, TransformationProvider<CtFieldAccess> fieldAccessTransformationProvider, TransformationProvider<CtTypeReference> constructorTransformationProvider , ElementTransformationTracker tracker, Factory dependencyFactory) {
+    private void migrate(Migration migration, TransformationProvider<CtInvocation> methodCallTransformationProvider, TransformationProvider<CtFieldAccess> fieldAccessTransformationProvider, TransformationProvider<CtTypeReference> constructorTransformationProvider, ElementTransformationTracker tracker, Factory dependencyFactory) {
         handleAttributeMigrations(migration, fieldAccessTransformationProvider, tracker);
         handleMethodMigrations(migration, methodCallTransformationProvider, tracker, dependencyFactory);
         handleClassMigrations(migration, methodCallTransformationProvider, constructorTransformationProvider, tracker, dependencyFactory);

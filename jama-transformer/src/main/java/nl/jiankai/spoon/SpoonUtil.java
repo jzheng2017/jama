@@ -1,21 +1,18 @@
 package nl.jiankai.spoon;
 
+import nl.jiankai.ElementTransformationTracker;
 import nl.jiankai.api.project.Project;
 import nl.jiankai.api.project.ProjectType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import spoon.Launcher;
 import spoon.MavenLauncher;
-import spoon.reflect.code.CtConstructorCall;
 import spoon.reflect.code.CtFieldAccess;
 import spoon.reflect.code.CtInvocation;
 import spoon.reflect.declaration.CtClass;
-import spoon.reflect.declaration.CtConstructor;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.reference.CtTypeReference;
-import spoon.reflect.visitor.DefaultJavaPrettyPrinter;
-import spoon.support.sniper.SniperJavaPrettyPrinter;
 
 import java.util.List;
 
@@ -41,7 +38,11 @@ public class SpoonUtil {
     }
 
     public static String getSignature(CtInvocation<?> methodCall) {
-        return getClass(methodCall) + "#" + methodCall.getExecutable().getSimpleName() + "(" + String.join(", ", getArgumentTypes(methodCall)) + ")";
+        return getSignature(methodCall, null);
+    }
+
+    public static String getSignature(CtInvocation<?> methodCall, ElementTransformationTracker tracker) {
+        return tracker.currentSignature(getClass(methodCall, tracker)) + "#" + methodCall.getExecutable().getSimpleName() + "(" + String.join(", ", getArgumentTypes(methodCall)) + ")";
     }
 
     public static String getSignatureWithoutClass(CtInvocation<?> methodCall) {
@@ -76,12 +77,15 @@ public class SpoonUtil {
         return ctClass.getReference().getQualifiedName();
     }
 
-    public static String getClass(CtInvocation<?> methodCall) {
+    public static String getClass(CtInvocation<?> methodCall, ElementTransformationTracker tracker) {
         if (methodCall.getExecutable().getDeclaringType() != null) {
-            return methodCall.getExecutable().getDeclaringType().getQualifiedName();
-        } else {
-            return methodCall.getTarget().getType().getQualifiedName();
+            return tracker.currentSignature(methodCall.getExecutable().getDeclaringType().getQualifiedName());
+        } else if (methodCall.getTarget().getType() != null){
+            return tracker.currentSignature(methodCall.getTarget().getType().getQualifiedName());
         }
+
+        LOGGER.warn("Could not get class for method call '{}'", methodCall.getExecutable().getSimpleName());
+        return "";
     }
 
     public static String getSignature(CtFieldAccess fieldAccess) {

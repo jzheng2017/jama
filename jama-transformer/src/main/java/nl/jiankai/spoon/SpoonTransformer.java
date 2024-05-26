@@ -67,7 +67,7 @@ public class SpoonTransformer implements Transformer<Processor<?>> {
         }
 
         Collection<File> allFilesInProcessedSourceDirectory = FileUtil.findFileRecursive(processedSourceDirectory, "", ".java");
-        Set<String> allFilesInOriginalSourceDirectory = FileUtil.findFileRecursive(sourceDirectories.getFirst(), "", ".java").stream().map(this::getPathStartingFromSource).collect(Collectors.toSet());
+        Set<String> allFilesInOriginalSourceDirectory = FileUtil.findFileRecursive(new File(sourceDirectories.getFirst(), Paths.get("main", "java").toString()), "", ".java").stream().map(this::getPathStartingFromSource).collect(Collectors.toSet());
 
         if (allFilesInOriginalSourceDirectory.size() == allFilesInProcessedSourceDirectory.size()) {
             return;

@@ -83,7 +83,7 @@ public class JDTCompilerProblemSolver {
         LOGGER.info("=============================");
         problems.forEach(problem -> solve(problem, classTransformationProvider, methodCallTransformationProvider, tracker));
         ElementHandler<Processor<?>> classTransformer = new SpoonClassTransformer(classTransformationProvider);
-        ElementHandler<Processor<?>> methodCallTransformer = new SpoonMethodCallTransformer(methodCallTransformationProvider);
+        ElementHandler<Processor<?>> methodCallTransformer = new SpoonMethodCallTransformer(methodCallTransformationProvider, tracker);
         transformer.addProcessor(classTransformer.handle());
         transformer.addProcessor(methodCallTransformer.handle());
         transformer.run();

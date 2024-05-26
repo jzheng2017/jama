@@ -38,5 +38,6 @@
         <module>jama-miner</module>
         <module>jama-app</module>
         <module>jama-transformer</module>
+        <module>jama-query</module>
     </modules>
 </project>

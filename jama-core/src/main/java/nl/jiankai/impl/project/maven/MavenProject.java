@@ -100,7 +100,7 @@ public class MavenProject implements Project {
                     File parent = pom.getParentFile();
                     return Objects.requireNonNull(parent.listFiles((FilenameFilter) new NameFileFilter("src"))).length == 1;
                 })
-                .map(file -> new File(file.getParentFile(), Paths.get("src", "main", "java").toString()))
+                .map(file -> new File(file.getParentFile(), "src"))
                 .toList();
     }
 

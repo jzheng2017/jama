@@ -26,11 +26,12 @@ public class ChangeReferenceTransformation implements Transformation<CtTypeRefer
                         .Type()
                         .get(newSignature)
                         .getReference();
-
+        String oldSignature = reference.getQualifiedName();
         String path = getPath(reference);
         reference.replace(newReference);
 
         tracker.count(new TransformationEvent("Changing reference", newSignature), path);
+        tracker.map(oldSignature, newSignature);
     }
 
     private String getPath(CtElement element) {

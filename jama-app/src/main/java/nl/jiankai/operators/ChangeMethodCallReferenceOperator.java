@@ -21,7 +21,7 @@ public class ChangeMethodCallReferenceOperator implements MigrationOperator {
     @Override
     public void migrate(Migration migration) {
         Set<RefactoringType> refactoringTypes = migration.refactorings();
-        String originalSignature = migration.mapping().original().signature();
+        String originalSignature = SignatureUtil.getFirstSignature(migration.mapping().original().signature(), tracker);
         String newSignature = migration.end().target().signature();
 
         if (refactoringTypes.contains(RefactoringType.MOVE_METHOD)) {

@@ -2,6 +2,7 @@ package nl.jiankai.operators;
 
 import nl.jiankai.ElementTransformationTracker;
 import nl.jiankai.api.Migration;
+import nl.jiankai.api.RefactoringType;
 import nl.jiankai.api.TransformationProvider;
 import nl.jiankai.spoon.transformations.clazz.ChangeReferenceTransformation;
 import spoon.reflect.factory.Factory;

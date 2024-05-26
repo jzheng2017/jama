@@ -16,7 +16,7 @@ public class RenameMethodCallOperator implements MigrationOperator {
 
     @Override
     public void migrate(Migration migration) {
-        String originalSignature = migration.mapping().original().signature();
+        String originalSignature = SignatureUtil.getFirstSignature(migration.mapping().original().signature(), tracker);
         String finalName = migration.end().target().name();
 
         transformationProvider.add(originalSignature, new RenameMethodCallTransformation(tracker, finalName, originalSignature));

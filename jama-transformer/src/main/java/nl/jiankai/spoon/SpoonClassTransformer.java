@@ -24,5 +24,4 @@ public class SpoonClassTransformer implements ElementHandler<Processor<?>> {
             }
         };
     }
-
 }

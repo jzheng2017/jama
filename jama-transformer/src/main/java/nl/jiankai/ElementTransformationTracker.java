@@ -8,18 +8,42 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class ElementTransformationTracker {
     private final Logger LOGGER = LoggerFactory.getLogger(ElementTransformationTracker.class);
-    private final Map<TransformationEvent, Integer> elementCounter = new HashMap<>();
+    private final Map<TransformationEvent, Long> elementCounter = new ConcurrentHashMap<>();
+    private final Map<String, String> mappings = new ConcurrentHashMap<>();
+    private final Map<String, String> intermediateStates = new HashMap<>();
     private final Set<String> affectedFiles = new HashSet<>();
 
     public void count(TransformationEvent transformationEvent, String filePath) {
-        elementCounter.merge(transformationEvent, 1, Integer::sum);
+        elementCounter.merge(transformationEvent, 1L, Long::sum);
         affectedFiles.add(filePath);
         LOGGER.info("Event {} at {}", transformationEvent, filePath);
     }
+
+    public void map(String oldSignature, String newSignature) {
+        mappings.put(newSignature, oldSignature);
+    }
+
+    public String currentSignature(String signature) {
+        if (mappings.containsKey(signature)) {
+            return currentSignature(mappings.get(signature));
+        }
+
+        return signature;
+    }
+
+    public long changes() {
+        return elementCounter
+                .values()
+                .stream()
+                .reduce(Long::sum)
+                .orElse(0L);
+    }
+
 
     public Set<String> affectedClasses() {
         return affectedFiles
@@ -36,6 +60,7 @@ public class ElementTransformationTracker {
     public void clear() {
         elementCounter.clear();
         affectedFiles.clear();
+        mappings.clear();
     }
 
     public void report() {
