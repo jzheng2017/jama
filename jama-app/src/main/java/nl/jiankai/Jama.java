@@ -19,6 +19,7 @@ import nl.jiankai.impl.storage.MultiFileCacheService;
 import nl.jiankai.migration.MethodMigrationPathEvaluatorImpl;
 import nl.jiankai.refactoringminer.RefactoringMinerImpl;
 import org.apache.commons.io.FileUtils;
+import org.eclipse.jgit.errors.RepositoryNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import spoon.Launcher;
@@ -26,6 +27,7 @@ import spoon.Launcher;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -39,20 +41,19 @@ public class Jama {
     //TODO fix generic type is erased and replace with an actual type
     public static void main(String[] args) throws IOException {
         File outputDirectory = new File(BASE_PATH);
-//        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-text"));
-        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-collections"));
-//        Collection<Migration> migrations = getMigrationPaths(dependencyProject, "82aecf36", "bcd37271"); //commons-text
-        Collection<Migration> migrations = getMigrationPaths(dependencyProject, "db18992", "6b7cf3f6"); //collections
+        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-text"));
+//        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-collections"));
+        Collection<Migration> migrations = getMigrationPaths(dependencyProject, "82aecf36", "bcd37271"); //commons-text
+//        Collection<Migration> migrations = getMigrationPaths(dependencyProject, "db18992", "6b7cf3f6"); //collections
 //
         LOGGER.info("Found {} migration paths", migrations.size());
         Launcher dependencyLauncher = getLauncher(dependencyProject);
         dependencyLauncher.buildModel();
         LOGGER.info("{} build sucessfully", dependencyProject.getId());
-//        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/plugin-test-repo-2"));
+        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/plugin-test-repo-2"));
 //        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-text"));
-//        Migrator migrator = new Migrator(new File(outputDirectory, Paths.get("migrated", migratedProject.getLocalPath().getName()).toString()));
-//        migrator.migrate(migratedProject, dependencyProject, migrations, dependencyLauncher, "1.11.1-SNAPSHOT");
-        runPipeline("/home/jiankai/dev/python/commons-collections-dependents.json", outputDirectory, dependencyProject, migrations, dependencyLauncher, "4.0","4.5.0-SNAPSHOT");
+        migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "1.11.1-SNAPSHOT");
+//        runPipeline("/home/jiankai/dev/python/commons-collections-dependents.json", outputDirectory, dependencyProject, migrations, dependencyLauncher, "4.0", "4.5.0-SNAPSHOT");
     }
 
     private static Collection<Migration> getMigrationPaths(GitRepository dependencyProject, String startCommitId, String endCommitId) {
@@ -90,7 +91,7 @@ public class Jama {
                     .readValue(new File(repoFile), new TypeReference<List<Repo>>() {
                     })
                     .parallelStream()
-                    .filter(repo -> repo.stars > 3000)
+                    .filter(repo -> repo.stars > 5 && repo.stars < 10)
                     .map(repo -> {
                         File repoDirectory = createRepoDirectory(outputDirectory, repo);
                         try {
@@ -98,6 +99,9 @@ public class Jama {
                         } catch (GitOperationException | IllegalStateException e) {
                             LOGGER.warn("Could not create git repository: {}", e.getMessage());
                             deleteRepo(repoDirectory);
+                            return null;
+                        } catch (Exception e) {
+                            LOGGER.warn("Unknown error occurred while creating git repository: {}", e.getMessage());
                             return null;
                         }
                     })
@@ -107,14 +111,19 @@ public class Jama {
                             LOGGER.info("Repository '{}' is eligible", repo.getId());
                             return true;
                         } else {
-                            LOGGER.info("Repository '{}' is not eligible", repo.getId());
                             deleteRepo(repo.getLocalPath());
                             return false;
                         }
                     })
-                    .forEach(repo -> migrate(repo, dependencyProject, outputDirectory, migrations, dependencyLauncher, newVersion));
+                    .forEach(repo -> {
+                        try {
+                            migrate(repo, dependencyProject, outputDirectory, migrations, dependencyLauncher, newVersion);
+                        } catch (Exception e) {
+                            LOGGER.error("Something went wrong while migrating: {}", e.getMessage());
+                        }
+                    });
         } finally {
-            FileUtils.delete(new File(BASE_PATH, "migrated"));
+            FileUtils.deleteDirectory(new File(BASE_PATH, "migrated"));
         }
     }
 
@@ -122,7 +131,6 @@ public class Jama {
         Collection<File> sourceDirectories = repo.getSourceDirectories();
 
         if (sourceDirectories.size() != 1) {
-            LOGGER.info("Repo '{}' is multi module, which is not supported", repo.getId());
             return false;
         }
 
@@ -146,7 +154,9 @@ public class Jama {
 
     private static void migrate(Project migratedProject, Project dependencyProject, File outputDirectory, Collection<Migration> migrations, Launcher dependencyLauncher, String newVersion) {
         Migrator migrator = new Migrator(new File(outputDirectory, Paths.get("migrated", migratedProject.getLocalPath().getName()).toString()));
-        LOGGER.info("Project: {} | Stats: {}", migratedProject.getId(), migrator.migrate(migratedProject, dependencyProject, migrations, dependencyLauncher, newVersion));
+        Migrator.Statistics statistics = migrator.migrate(migratedProject, dependencyProject, migrations, dependencyLauncher, newVersion);
+        CacheService<Migrator.Statistics> cacheService = new MultiFileCacheService<>(new File(BASE_PATH, Paths.get("results", LocalDateTime.now().toString()).toString()).toString(), new JacksonSerializationService(), Migrator.Statistics.class);
+        cacheService.write(statistics);
     }
 
     private static String createGitCloneUrl(String url) {
@@ -172,5 +182,4 @@ public class Jama {
             return startCommit + ":" + endCommit;
         }
     }
-
 }

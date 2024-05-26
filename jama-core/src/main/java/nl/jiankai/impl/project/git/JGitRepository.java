@@ -57,7 +57,7 @@ public class JGitRepository implements GitRepository {
     }
 
     @Override
-    public boolean test(Set<String> testClasses) {
+    public TestReport test(Set<String> testClasses) {
         return project.test(testClasses);
     }
 

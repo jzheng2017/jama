@@ -2,14 +2,11 @@ package nl.jiankai.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import nl.jiankai.api.SerializationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Map;
 
 public class JacksonSerializationService implements SerializationService {
@@ -22,7 +19,7 @@ public class JacksonSerializationService implements SerializationService {
     @Override
     public byte[] serialize(Object object) {
         try {
-            return objectMapper.writeValueAsBytes(object);
+            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(object);
         } catch (JsonProcessingException e) {
             LOGGER.warn("Could not serialize provided object", e);
             throw new RuntimeException(e);
@@ -46,5 +43,10 @@ public class JacksonSerializationService implements SerializationService {
             LOGGER.warn("Could not read provided object to map");
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public String extension() {
+        return "json";
     }
 }

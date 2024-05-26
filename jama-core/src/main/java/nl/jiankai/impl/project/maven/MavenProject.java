@@ -1,10 +1,7 @@
 package nl.jiankai.impl.project.maven;
 
 
-import nl.jiankai.api.project.Dependency;
-import nl.jiankai.api.project.Project;
-import nl.jiankai.api.project.ProjectData;
-import nl.jiankai.api.project.ProjectType;
+import nl.jiankai.api.project.*;
 import nl.jiankai.util.FileUtil;
 import org.apache.commons.io.filefilter.NameFileFilter;
 import org.apache.maven.shared.invoker.*;
@@ -12,10 +9,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.filechooser.FileNameExtensionFilter;
-import java.io.File;
-import java.io.FilenameFilter;
+import java.io.*;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class MavenProject implements Project {
     private static final Logger LOGGER = LoggerFactory.getLogger(MavenProject.class);
@@ -49,26 +47,53 @@ public class MavenProject implements Project {
     }
 
     @Override
-    public boolean test(Set<String> testClasses) {
+    public TestReport test(Set<String> testClasses) {
         File file = FileUtil.findPomFile(projectRootPath);
+        OutputStream outputStream = new ByteArrayOutputStream();
+        PrintStream printStream = new PrintStream(outputStream);
+        PrintStreamHandler printStreamHandler = new PrintStreamHandler(printStream, true);
         InvocationRequest request = new DefaultInvocationRequest();
+        request.setOutputHandler(printStreamHandler);
+        request.setErrorHandler(printStreamHandler);
         request.setPomFile(file);
+
         if (testClasses.isEmpty()) {
             request.setGoals(Collections.singletonList("test"));
         } else {
             request.setGoals(Collections.singletonList("test -Dtest=%s".formatted(String.join(",", testClasses))));
         }
-
         Invoker invoker = new DefaultInvoker();
 
         try {
             LOGGER.info("Running mvn test");
-            invoker.execute(request);
-            return true;
+            InvocationResult result = invoker.execute(request);
+            if (result.getExitCode() == 0) {
+                return getTestReport(outputStream.toString());
+            } else {
+                LOGGER.warn("Failed to run mvn test: {}", outputStream);
+                return TestReport.failure();
+            }
         } catch (MavenInvocationException e) {
             LOGGER.error("Something went wrong when trying to invoke mvn test", e);
-            return false;
+            return TestReport.failure();
         }
+    }
+
+    private TestReport getTestReport(String output) {
+        Pattern pattern = Pattern.compile("Tests run:\\s*(\\d+),\\s*Failures:\\s*(\\d+),\\s*Errors:\\s*(\\d+),\\s*Skipped:\\s*(\\d+)");
+        Matcher matcher = pattern.matcher(output);
+        TestReport testReport = TestReport.failure();
+
+        while (matcher.find()) {
+            int totalTests = Integer.parseInt(matcher.group(1));
+            int failures = Integer.parseInt(matcher.group(2));
+            int errors = Integer.parseInt(matcher.group(3));
+            int skipped = Integer.parseInt(matcher.group(4));
+            int successful = totalTests - failures - errors - skipped;
+            testReport = new TestReport(totalTests, successful, errors, failures, skipped, true);
+        }
+
+        return testReport;
     }
 
     @Override

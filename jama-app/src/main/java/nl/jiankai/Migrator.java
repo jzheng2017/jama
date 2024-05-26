@@ -1,18 +1,12 @@
 package nl.jiankai;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jiankai.api.*;
-import nl.jiankai.api.project.GitRepository;
 import nl.jiankai.api.project.Project;
-import nl.jiankai.api.storage.CacheService;
-import nl.jiankai.impl.JacksonSerializationService;
+import nl.jiankai.api.project.TestReport;
+import nl.jiankai.compiler.CompilationResult;
 import nl.jiankai.impl.project.CompositeProjectFactory;
-import nl.jiankai.impl.storage.MultiFileCacheService;
-import nl.jiankai.migration.MethodMigrationPathEvaluatorImpl;
 import nl.jiankai.operators.*;
-import nl.jiankai.refactoringminer.RefactoringMinerImpl;
 import nl.jiankai.spoon.*;
 import nl.jiankai.spoon.transformations.SpoonTransformationProvider;
 import org.apache.commons.io.FileUtils;
@@ -21,7 +15,6 @@ import org.slf4j.LoggerFactory;
 import spoon.Launcher;
 import spoon.compiler.ModelBuildingException;
 import spoon.processing.Processor;
-import spoon.reflect.CtModel;
 import spoon.reflect.code.CtFieldAccess;
 import spoon.reflect.code.CtInvocation;
 import spoon.reflect.declaration.CtClass;
@@ -34,7 +27,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static nl.jiankai.compiler.JDTCompilerProblemSolver.compile;
-import static nl.jiankai.spoon.SpoonUtil.getLauncher;
 
 public class Migrator {
     private static final Logger LOGGER = LoggerFactory.getLogger(Migrator.class);
@@ -44,7 +36,15 @@ public class Migrator {
         this.outputDirectory = outputDirectory;
     }
 
-    public record Statistics(int affectedClasses, long changes) {}
+    @JsonIgnoreProperties({"id"})
+    public record Statistics(String project, int totalAffectedClasses, long totalChanges, Set<String> affectedClasses,
+                             Map<TransformationEvent, Long> elementChanges,
+                             List<CompilationResult> compilationResults, TestReport testResults) implements Identifiable {
+        @Override
+        public String getId() {
+            return project;
+        }
+    }
 
     public Statistics migrate(Project toMigrateProject, Project dependencyProject, Collection<Migration> migrations, Launcher dependencyLauncher, String newVersion) {
         long start = System.currentTimeMillis();
@@ -78,12 +78,12 @@ public class Migrator {
         }
 
         Project migratedProject = new CompositeProjectFactory().createProject(outputDirectory);
-        compile(migratedProject, toMigrateProject, dependencyProject, newVersion, tracker);
-        testAffectedClasses(tracker, migratedProject);
+        List<CompilationResult> compilationResults = compile(migratedProject, toMigrateProject, dependencyProject, newVersion, tracker);
+        TestReport testReport = testAffectedClasses(tracker, migratedProject);
 
         long end = System.currentTimeMillis();
         LOGGER.info("It took {} seconds to migrate {}", (end - start) / 1000, toMigrateProject.getId());
-        return new Statistics(tracker.affectedClasses().size(), tracker.changes());
+        return new Statistics(migratedProject.getProjectVersion().toString(), tracker.affectedClasses().size(), tracker.changes(), tracker.affectedClasses(), tracker.elementChanges(), compilationResults, testReport);
     }
 
     private void collectClassMappings(Collection<Migration> migrations, ElementTransformationTracker tracker) {
@@ -97,12 +97,10 @@ public class Migrator {
 
                 current = current.next();
             }
-
-
         });
     }
 
-    private void testAffectedClasses(ElementTransformationTracker tracker, Project migrationProject) {
+    private TestReport testAffectedClasses(ElementTransformationTracker tracker, Project migrationProject) {
         Set<String> affectedClasses = tracker.affectedClasses();
         LOGGER.info("{} classes affected", affectedClasses.size());
         if (!affectedClasses.isEmpty()) {
@@ -110,8 +108,9 @@ public class Migrator {
                     .stream()
                     .map(classSignature -> classSignature + "Test") //we assume that the test classes are named according to ClassNameTest convention
                     .collect(Collectors.toSet());
-            migrationProject.test(testClassesEquivalent);
+            return migrationProject.test(testClassesEquivalent);
         }
+        return new TestReport(0, 0, 0, 0, 0, true);
     }
 
     private void setup(Project toMigrateProject, Project dependencyProject) {

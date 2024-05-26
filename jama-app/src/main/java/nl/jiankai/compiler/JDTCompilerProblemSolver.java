@@ -26,6 +26,7 @@ import spoon.reflect.declaration.CtClass;
 import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -43,21 +44,25 @@ public class JDTCompilerProblemSolver {
     public static final int CANNOT_BE_RESOLVED_TO_A_TYPE = 16777218;
     public static final int UNHANDLED_EXCEPTION = 16777384;
 
-    public static void compile(Project migratedProject, Project originalProject, Project dependencyProject, String newVersion, ElementTransformationTracker tracker) {
+    public static List<CompilationResult> compile(Project migratedProject, Project originalProject, Project dependencyProject, String newVersion, ElementTransformationTracker tracker) {
         var methodCallTransformationProvider = new SpoonTransformationProvider<CtInvocation>();
         var classTransformationProvider = new SpoonTransformationProvider<CtClass>();
-        ProjectCoordinate coord = dependencyProject.getProjectVersion().coordinate();;
+        ProjectCoordinate coord = dependencyProject.getProjectVersion().coordinate();
+        ;
         migratedProject.upgradeDependency(new Dependency(coord.groupId(), coord.artifactId(), newVersion));
         migratedProject.install();
         Transformer<Processor<?>> compilationTransformer = new SpoonTransformer(originalProject, migratedProject, migratedProject.getLocalPath());
 
-        compile(migratedProject, compilationTransformer, 1, classTransformationProvider, methodCallTransformationProvider, tracker);
+        List<CompilationResult> result = compile(migratedProject, compilationTransformer, 1, classTransformationProvider, methodCallTransformationProvider, tracker, new ArrayList<>());
         tracker.report();
+        return result;
     }
 
-    public static void compile(Project project, Transformer<Processor<?>> transformer, int iterations, TransformationProvider<CtClass> classTransformationProvider, TransformationProvider<CtInvocation> methodCallTransformationProvider, ElementTransformationTracker tracker) {
+    public static List<CompilationResult> compile(Project project, Transformer<Processor<?>> transformer, int iterations,
+                                                  TransformationProvider<CtClass> classTransformationProvider, TransformationProvider<CtInvocation> methodCallTransformationProvider, ElementTransformationTracker tracker,
+                                                  List<CompilationResult> results) {
         if (iterations > MAX_ITERATIONS) {
-            return;
+            return results;
         }
         LOGGER.info("Compilation iteration {}", iterations);
         Launcher launcher = getLauncher(project);
@@ -65,16 +70,23 @@ public class JDTCompilerProblemSolver {
         try {
             modelBuilder.build();
             if (!modelBuilder.getProblems().isEmpty()) {
-                handleCompilationErrors(project, transformer, iterations, classTransformationProvider, methodCallTransformationProvider, tracker, modelBuilder);
+                handleCompilationErrors(project, transformer, iterations, classTransformationProvider, methodCallTransformationProvider, tracker, modelBuilder, results);
             } else {
                 LOGGER.info("Compilation finished with zero errors");
+                results.add(new CompilationResult(iterations, 0, modelBuilder.getProblems().stream().filter(CategorizedProblem::isWarning).count(), modelBuilder.getProblems().stream().filter(CategorizedProblem::isInfo).count()));
             }
         } catch (ModelBuildingException ignored) {
-            handleCompilationErrors(project, transformer, iterations, classTransformationProvider, methodCallTransformationProvider, tracker, modelBuilder);
+            handleCompilationErrors(project, transformer, iterations, classTransformationProvider, methodCallTransformationProvider, tracker, modelBuilder, results);
         }
+
+        return results;
     }
 
-    private static void handleCompilationErrors(Project project, Transformer<Processor<?>> transformer, int iterations, TransformationProvider<CtClass> classTransformationProvider, TransformationProvider<CtInvocation> methodCallTransformationProvider, ElementTransformationTracker tracker, JDTBasedSpoonCompiler modelBuilder) {
+    private static void handleCompilationErrors(Project project, Transformer<Processor<?>> transformer, int iterations,
+                                                TransformationProvider<CtClass> classTransformationProvider, TransformationProvider<CtInvocation> methodCallTransformationProvider,
+                                                ElementTransformationTracker tracker, JDTBasedSpoonCompiler modelBuilder,
+                                                List<CompilationResult> results) {
+        results.add(new CompilationResult(iterations, modelBuilder.getProblems().stream().filter(CategorizedProblem::isError).count(), modelBuilder.getProblems().stream().filter(CategorizedProblem::isWarning).count(), modelBuilder.getProblems().stream().filter(CategorizedProblem::isInfo).count()));
         List<CategorizedProblem> problems = modelBuilder.getProblems().stream().filter(CategorizedProblem::isError).toList();
         LOGGER.info("Number of compiler errors: {}", problems.size());
         LOGGER.info("=============================");
@@ -88,7 +100,7 @@ public class JDTCompilerProblemSolver {
         transformer.addProcessor(methodCallTransformer.handle());
         transformer.run();
         transformer.reset();
-        compile(project, transformer, iterations + 1, classTransformationProvider, methodCallTransformationProvider, tracker);
+        compile(project, transformer, iterations + 1, classTransformationProvider, methodCallTransformationProvider, tracker, results);
     }
 
     private static void solve(CategorizedProblem categorizedProblem, TransformationProvider<CtClass> classTransformationProvider, TransformationProvider<CtInvocation> methodCallTransformationProvider, ElementTransformationTracker tracker) {

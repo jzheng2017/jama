@@ -4,7 +4,6 @@ import nl.jiankai.api.TransformationEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -15,7 +14,6 @@ public class ElementTransformationTracker {
     private final Logger LOGGER = LoggerFactory.getLogger(ElementTransformationTracker.class);
     private final Map<TransformationEvent, Long> elementCounter = new ConcurrentHashMap<>();
     private final Map<String, String> mappings = new ConcurrentHashMap<>();
-    private final Map<String, String> intermediateStates = new HashMap<>();
     private final Set<String> affectedFiles = new HashSet<>();
 
     public void count(TransformationEvent transformationEvent, String filePath) {
@@ -34,6 +32,10 @@ public class ElementTransformationTracker {
         }
 
         return signature;
+    }
+
+    public Map<TransformationEvent, Long> elementChanges() {
+        return elementCounter;
     }
 
     public long changes() {

@@ -7,4 +7,5 @@ public interface SerializationService {
 
     <T> T deserialize(byte[] object, Class<T> deserializedClass);
     Map<String, Object> read(byte[] object);
+    String extension();
 }

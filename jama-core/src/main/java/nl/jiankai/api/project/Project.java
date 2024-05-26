@@ -29,7 +29,7 @@ public interface Project extends Identifiable {
      */
     void install();
 
-    boolean test(Set<String> testClasses);
+    TestReport test(Set<String> testClasses);
 
     /**
      * @return the project details containing group id, artifact id and the version

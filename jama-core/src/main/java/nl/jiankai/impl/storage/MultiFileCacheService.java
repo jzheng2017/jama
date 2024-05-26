@@ -79,7 +79,7 @@ public class MultiFileCacheService<T extends Identifiable> implements CacheServi
 
     private String createFileLocation(String filename) {
         try {
-            return baseLocation + File.separator + HashingUtil.md5Hash(filename);
+            return baseLocation + File.separator + HashingUtil.md5Hash(filename) + "." + serializationService.extension();
         } catch (NoSuchAlgorithmException e) {
             LOGGER.warn("Couldn't hash the filename due to the hashing algorithm not being present", e);
             throw new IllegalStateException(e);
