@@ -71,18 +71,20 @@ public class MavenProject implements Project {
                 return getTestReport(outputStream.toString());
             } else {
                 LOGGER.warn("Failed to run mvn test: {}", outputStream);
-                return TestReport.failure();
+                return TestReport.failure(outputStream.toString());
             }
         } catch (MavenInvocationException e) {
             LOGGER.error("Something went wrong when trying to invoke mvn test", e);
-            return TestReport.failure();
+            return TestReport.failure(e.getMessage());
+        } finally {
+            LOGGER.info(outputStream.toString());
         }
     }
 
     private TestReport getTestReport(String output) {
         Pattern pattern = Pattern.compile("Tests run:\\s*(\\d+),\\s*Failures:\\s*(\\d+),\\s*Errors:\\s*(\\d+),\\s*Skipped:\\s*(\\d+)");
         Matcher matcher = pattern.matcher(output);
-        TestReport testReport = TestReport.failure();
+        TestReport testReport = TestReport.failure(output);
 
         while (matcher.find()) {
             int totalTests = Integer.parseInt(matcher.group(1));
@@ -90,7 +92,7 @@ public class MavenProject implements Project {
             int errors = Integer.parseInt(matcher.group(3));
             int skipped = Integer.parseInt(matcher.group(4));
             int successful = totalTests - failures - errors - skipped;
-            testReport = new TestReport(totalTests, successful, errors, failures, skipped, true);
+            testReport = new TestReport(totalTests, successful, errors, failures, skipped, true, "");
         }
 
         return testReport;

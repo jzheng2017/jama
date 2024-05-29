@@ -15,6 +15,7 @@ import nl.jiankai.spoon.transformations.clazz.RemoveMethodTransformation;
 import nl.jiankai.spoon.transformations.clazz.RemoveParentClassTransformation;
 import nl.jiankai.spoon.transformations.method.RemoveMethodCallTransformation;
 import nl.jiankai.util.FileUtil;
+import org.apache.commons.io.FileUtils;
 import org.eclipse.jdt.core.compiler.CategorizedProblem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +27,7 @@ import spoon.reflect.declaration.CtClass;
 import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -45,54 +47,78 @@ public class JDTCompilerProblemSolver {
     public static final int UNHANDLED_EXCEPTION = 16777384;
 
     public static List<CompilationResult> compile(Project migratedProject, Project originalProject, Project dependencyProject, String newVersion, ElementTransformationTracker tracker) {
-        var methodCallTransformationProvider = new SpoonTransformationProvider<CtInvocation>();
-        var classTransformationProvider = new SpoonTransformationProvider<CtClass>();
+
         ProjectCoordinate coord = dependencyProject.getProjectVersion().coordinate();
-        ;
+
         migratedProject.upgradeDependency(new Dependency(coord.groupId(), coord.artifactId(), newVersion));
         migratedProject.install();
-        Transformer<Processor<?>> compilationTransformer = new SpoonTransformer(originalProject, migratedProject, migratedProject.getLocalPath());
 
-        List<CompilationResult> result = compile(migratedProject, compilationTransformer, 1, classTransformationProvider, methodCallTransformationProvider, tracker, new ArrayList<>());
+        List<CompilationResult> result = compile(originalProject, migratedProject, 1, tracker, new ArrayList<>());
         tracker.report();
         return result;
     }
 
-    public static List<CompilationResult> compile(Project project, Transformer<Processor<?>> transformer, int iterations,
-                                                  TransformationProvider<CtClass> classTransformationProvider, TransformationProvider<CtInvocation> methodCallTransformationProvider, ElementTransformationTracker tracker,
+    public static List<CompilationResult> compile(Project originalProject, Project migratedProject, int iterations,
+                                               ElementTransformationTracker tracker,
                                                   List<CompilationResult> results) {
         if (iterations > MAX_ITERATIONS) {
             return results;
         }
+
+
         LOGGER.info("Compilation iteration {}", iterations);
-        Launcher launcher = getLauncher(project);
+        Launcher launcher = getLauncher(migratedProject);
         JDTBasedSpoonCompiler modelBuilder = (JDTBasedSpoonCompiler) launcher.getModelBuilder();
         try {
             modelBuilder.build();
             if (!modelBuilder.getProblems().isEmpty()) {
-                handleCompilationErrors(project, transformer, iterations, classTransformationProvider, methodCallTransformationProvider, tracker, modelBuilder, results);
+                handleCompilationErrors(originalProject, migratedProject, iterations, tracker, modelBuilder, results);
             } else {
                 LOGGER.info("Compilation finished with zero errors");
-                results.add(new CompilationResult(iterations, 0, modelBuilder.getProblems().stream().filter(CategorizedProblem::isWarning).count(), modelBuilder.getProblems().stream().filter(CategorizedProblem::isInfo).count()));
+                results.add(new CompilationResult(
+                        iterations,
+                        0,
+                        modelBuilder.getProblems().stream().filter(CategorizedProblem::isWarning).count(),
+                        modelBuilder.getProblems().stream().filter(CategorizedProblem::isInfo).count(),
+                        getCompilerErrors(modelBuilder.getProblems())
+                ));
             }
         } catch (ModelBuildingException ignored) {
-            handleCompilationErrors(project, transformer, iterations, classTransformationProvider, methodCallTransformationProvider, tracker, modelBuilder, results);
+            handleCompilationErrors(originalProject, migratedProject, iterations, tracker, modelBuilder, results);
         }
 
         return results;
     }
 
-    private static void handleCompilationErrors(Project project, Transformer<Processor<?>> transformer, int iterations,
-                                                TransformationProvider<CtClass> classTransformationProvider, TransformationProvider<CtInvocation> methodCallTransformationProvider,
+    private static List<CompilationResult.CompilerError> getCompilerErrors(List<CategorizedProblem> problems) {
+        return problems.stream().map(problem -> new CompilationResult.CompilerError(problem.getID(), problem.getMessage())).collect(Collectors.toList());
+    }
+
+    private static void handleCompilationErrors(Project originalProject, Project migratedProject, int iterations,
                                                 ElementTransformationTracker tracker, JDTBasedSpoonCompiler modelBuilder,
                                                 List<CompilationResult> results) {
-        results.add(new CompilationResult(iterations, modelBuilder.getProblems().stream().filter(CategorizedProblem::isError).count(), modelBuilder.getProblems().stream().filter(CategorizedProblem::isWarning).count(), modelBuilder.getProblems().stream().filter(CategorizedProblem::isInfo).count()));
+        results.add(new CompilationResult(iterations,
+                modelBuilder.getProblems().stream().filter(CategorizedProblem::isError).count(),
+                modelBuilder.getProblems().stream().filter(CategorizedProblem::isWarning).count(),
+                modelBuilder.getProblems().stream().filter(CategorizedProblem::isInfo).count(),
+                getCompilerErrors(modelBuilder.getProblems())));
         List<CategorizedProblem> problems = modelBuilder.getProblems().stream().filter(CategorizedProblem::isError).toList();
         LOGGER.info("Number of compiler errors: {}", problems.size());
         LOGGER.info("=============================");
         LOGGER.info("Errors (limited to {}):", ERROR_LIMIT);
         problems.stream().limit(ERROR_LIMIT).forEach(problem -> LOGGER.info(problem.toString()));
         LOGGER.info("=============================");
+        var methodCallTransformationProvider = new SpoonTransformationProvider<CtInvocation>();
+        var classTransformationProvider = new SpoonTransformationProvider<CtClass>();
+        File destination = new File(migratedProject.getLocalPath() + "_tmp");
+        Transformer<Processor<?>> transformer = new SpoonTransformer(originalProject, migratedProject, destination);
+
+        try {
+            FileUtils.copyDirectory(migratedProject.getLocalPath(), destination);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
         problems.forEach(problem -> solve(problem, classTransformationProvider, methodCallTransformationProvider, tracker));
         ElementHandler<Processor<?>> classTransformer = new SpoonClassTransformer(classTransformationProvider);
         ElementHandler<Processor<?>> methodCallTransformer = new SpoonMethodCallTransformer(methodCallTransformationProvider, tracker);
@@ -100,7 +126,15 @@ public class JDTCompilerProblemSolver {
         transformer.addProcessor(methodCallTransformer.handle());
         transformer.run();
         transformer.reset();
-        compile(project, transformer, iterations + 1, classTransformationProvider, methodCallTransformationProvider, tracker, results);
+
+        try {
+            FileUtils.deleteDirectory(migratedProject.getLocalPath());
+            FileUtils.moveDirectory(destination, migratedProject.getLocalPath());
+            FileUtils.deleteDirectory(destination);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        compile(originalProject, migratedProject, iterations + 1, tracker, results);
     }
 
     private static void solve(CategorizedProblem categorizedProblem, TransformationProvider<CtClass> classTransformationProvider, TransformationProvider<CtInvocation> methodCallTransformationProvider, ElementTransformationTracker tracker) {

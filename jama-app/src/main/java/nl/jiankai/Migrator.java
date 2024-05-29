@@ -6,6 +6,7 @@ import nl.jiankai.api.project.Project;
 import nl.jiankai.api.project.TestReport;
 import nl.jiankai.compiler.CompilationResult;
 import nl.jiankai.impl.project.CompositeProjectFactory;
+import nl.jiankai.impl.project.git.JGitRepositoryFactory;
 import nl.jiankai.operators.*;
 import nl.jiankai.spoon.*;
 import nl.jiankai.spoon.transformations.SpoonTransformationProvider;
@@ -27,6 +28,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static nl.jiankai.compiler.JDTCompilerProblemSolver.compile;
+import static nl.jiankai.spoon.SpoonUtil.getLauncher;
 
 public class Migrator {
     private static final Logger LOGGER = LoggerFactory.getLogger(Migrator.class);
@@ -38,11 +40,15 @@ public class Migrator {
 
     @JsonIgnoreProperties({"id"})
     public record Statistics(String project, int totalAffectedClasses, long totalChanges, Set<String> affectedClasses,
-                             Map<TransformationEvent, Long> elementChanges,
-                             List<CompilationResult> compilationResults, TestReport testResults) implements Identifiable {
+                             List<TransformationCount> elementChanges,
+                             List<CompilationResult> compilationResults,
+                             TestReport testResults) implements Identifiable {
         @Override
         public String getId() {
             return project;
+        }
+
+        public record TransformationCount(String transformation, String element, long count) {
         }
     }
 
@@ -70,6 +76,7 @@ public class Migrator {
         transformer.addProcessor(classTransformer.handle());
         transformer.addProcessor(referenceTransformer.handle()); //it's important that class references are migrated last as otherwise other code elements that reference these class references can not be matched anymore
 
+
         try {
             transformer.run();
             tracker.report();
@@ -83,7 +90,13 @@ public class Migrator {
 
         long end = System.currentTimeMillis();
         LOGGER.info("It took {} seconds to migrate {}", (end - start) / 1000, toMigrateProject.getId());
-        return new Statistics(migratedProject.getProjectVersion().toString(), tracker.affectedClasses().size(), tracker.changes(), tracker.affectedClasses(), tracker.elementChanges(), compilationResults, testReport);
+        return new Statistics(
+                migratedProject.getProjectVersion().toString(),
+                tracker.affectedClasses().size(), tracker.changes(),
+                tracker.affectedClasses(),
+                tracker.elementChanges().entrySet().stream().map(event -> new Statistics.TransformationCount(event.getKey().transformation(), event.getKey().element(), event.getValue())).toList(),
+                compilationResults,
+                testReport);
     }
 
     private void collectClassMappings(Collection<Migration> migrations, ElementTransformationTracker tracker) {
@@ -110,7 +123,7 @@ public class Migrator {
                     .collect(Collectors.toSet());
             return migrationProject.test(testClassesEquivalent);
         }
-        return new TestReport(0, 0, 0, 0, 0, true);
+        return new TestReport(0, 0, 0, 0, 0, true, "");
     }
 
     private void setup(Project toMigrateProject, Project dependencyProject) {
@@ -122,7 +135,6 @@ public class Migrator {
             FileUtils.deleteQuietly(new File(outputDirectory, "spoon.classpath-app.tmp"));
             FileUtils.deleteQuietly(new File(dependencyProject.getLocalPath(), "spoon.classpath.tmp"));
             FileUtils.deleteQuietly(new File(dependencyProject.getLocalPath(), "spoon.classpath-app.tmp"));
-
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -131,10 +143,10 @@ public class Migrator {
     private void migrate(Migration migration, TransformationProvider<CtInvocation> methodCallTransformationProvider, TransformationProvider<CtFieldAccess> fieldAccessTransformationProvider, TransformationProvider<CtTypeReference> constructorTransformationProvider, ElementTransformationTracker tracker, Factory dependencyFactory) {
         handleAttributeMigrations(migration, fieldAccessTransformationProvider, tracker);
         handleMethodMigrations(migration, methodCallTransformationProvider, tracker, dependencyFactory);
-        handleClassMigrations(migration, methodCallTransformationProvider, constructorTransformationProvider, tracker, dependencyFactory);
+        handleClassMigrations(migration, constructorTransformationProvider, tracker, dependencyFactory);
     }
 
-    private void handleClassMigrations(Migration migration, TransformationProvider<CtInvocation> methodCallTransformationProvider, TransformationProvider<CtTypeReference> constructorTransformationProvider, ElementTransformationTracker tracker, Factory dependencyFactory) {
+    private void handleClassMigrations(Migration migration, TransformationProvider<CtTypeReference> constructorTransformationProvider, ElementTransformationTracker tracker, Factory dependencyFactory) {
         Set<RefactoringType> refactoringTypes = migration.refactorings();
 
         if (refactoringTypes.stream().anyMatch(RefactoringType::isClassReferenceRefactoring)) {

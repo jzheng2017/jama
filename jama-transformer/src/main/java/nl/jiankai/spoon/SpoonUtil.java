@@ -27,7 +27,7 @@ public class SpoonUtil {
         };
 
 //        launcher.getEnvironment().setPrettyPrinterCreator(() -> new SniperJavaPrettyPrinter(launcher.getEnvironment()));
-        launcher.getEnvironment().setAutoImports(true);
+//        launcher.getEnvironment().setAutoImports(true); //bug? removes imports that are used
         launcher.getEnvironment().setNoClasspath(true); //which allows us to suppress compilation errors (no exception thrown)
 
         return launcher;

@@ -14,6 +14,7 @@ import nl.jiankai.api.project.ProjectData;
 import nl.jiankai.api.storage.CacheService;
 import nl.jiankai.impl.JacksonSerializationService;
 import nl.jiankai.impl.project.git.GitOperationException;
+import nl.jiankai.impl.project.git.JGitRepository;
 import nl.jiankai.impl.project.git.JGitRepositoryFactory;
 import nl.jiankai.impl.storage.MultiFileCacheService;
 import nl.jiankai.migration.MethodMigrationPathEvaluatorImpl;
@@ -27,6 +28,7 @@ import spoon.Launcher;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -41,18 +43,25 @@ public class Jama {
     //TODO fix generic type is erased and replace with an actual type
     public static void main(String[] args) throws IOException {
         File outputDirectory = new File(BASE_PATH);
-        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-text"));
-//        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-collections"));
-        Collection<Migration> migrations = getMigrationPaths(dependencyProject, "82aecf36", "bcd37271"); //commons-text
-//        Collection<Migration> migrations = getMigrationPaths(dependencyProject, "db18992", "6b7cf3f6"); //collections
+//        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-text"));
+        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-collections"));
+//        Collection<Migration> migrations = getMigrationPaths(dependencyProject, "82aecf36", "bcd37271"); //commons-text
+        Collection<Migration> migrations = getMigrationPaths(dependencyProject, "db18992", "6b7cf3f6"); //collections
 //
         LOGGER.info("Found {} migration paths", migrations.size());
         Launcher dependencyLauncher = getLauncher(dependencyProject);
         dependencyLauncher.buildModel();
         LOGGER.info("{} build sucessfully", dependencyProject.getId());
-        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/plugin-test-repo-2"));
+//        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/plugin-test-repo-2"));
+        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/opencsv-source"));
+//        File dest = new File(outputDirectory, Paths.get("migrated", "esapi-java-legacy").toS);
+//        FileUtils.copyDirectory(migratedProject.getLocalPath(), dest);
+//        Launcher dependent = getLauncher(new JGitRepositoryFactory().createProject(dest));
+//        boolean build = dependent.getModelBuilder().build();
+//        System.out.println(build);
 //        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-text"));
-        migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "1.11.1-SNAPSHOT");
+        migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "4.5.0-SNAPSHOT"); //collections
+//        migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "1.11.1-SNAPSHOT"); //commons-text
 //        runPipeline("/home/jiankai/dev/python/commons-collections-dependents.json", outputDirectory, dependencyProject, migrations, dependencyLauncher, "4.0", "4.5.0-SNAPSHOT");
     }
 
@@ -155,7 +164,7 @@ public class Jama {
     private static void migrate(Project migratedProject, Project dependencyProject, File outputDirectory, Collection<Migration> migrations, Launcher dependencyLauncher, String newVersion) {
         Migrator migrator = new Migrator(new File(outputDirectory, Paths.get("migrated", migratedProject.getLocalPath().getName()).toString()));
         Migrator.Statistics statistics = migrator.migrate(migratedProject, dependencyProject, migrations, dependencyLauncher, newVersion);
-        CacheService<Migrator.Statistics> cacheService = new MultiFileCacheService<>(new File(BASE_PATH, Paths.get("results", LocalDateTime.now().toString()).toString()).toString(), new JacksonSerializationService(), Migrator.Statistics.class);
+        CacheService<Migrator.Statistics> cacheService = new MultiFileCacheService<>(new File(BASE_PATH, Paths.get("results", LocalDate.now().toString()).toString()).toString(), new JacksonSerializationService(), Migrator.Statistics.class);
         cacheService.write(statistics);
     }
 
