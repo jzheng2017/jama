@@ -47,7 +47,6 @@ public class JDTCompilerProblemSolver {
     public static final int UNHANDLED_EXCEPTION = 16777384;
 
     public static List<CompilationResult> compile(Project migratedProject, Project originalProject, Project dependencyProject, String newVersion, ElementTransformationTracker tracker) {
-
         ProjectCoordinate coord = dependencyProject.getProjectVersion().coordinate();
 
         migratedProject.upgradeDependency(new Dependency(coord.groupId(), coord.artifactId(), newVersion));

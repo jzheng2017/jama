@@ -2,27 +2,26 @@ package nl.jiankai.spoon;
 
 import nl.jiankai.api.ProjectQuality;
 import nl.jiankai.api.Reference;
-import nl.jiankai.api.ReferenceCollector;
 import nl.jiankai.api.ReferenceType;
+import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtPackage;
-import spoon.reflect.reference.CtReference;
+import spoon.reflect.visitor.filter.TypeFilter;
 
-import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class SpoonProjectQuality implements ProjectQuality<CtPackage> {
-    private final ReferenceCollector<CtReference, CtPackage> referenceCollector;
-
-    public SpoonProjectQuality(ReferenceCollector<CtReference, CtPackage> referenceCollector) {
-        this.referenceCollector = referenceCollector;
-    }
 
     @Override
     public Set<Reference> getUntestedChanges(Set<Reference> references, CtPackage source) {
-        Set<CtReference> spoonReferences = new HashSet<>(referenceCollector.collectReferences(references, source));
-        Set<Reference> methodReferences = references.stream().filter(reference -> reference.referenceType().equals(ReferenceType.METHOD)).collect(Collectors.toSet());
-
-        return Set.of();
+        Set<Reference> classes = source.getElements(new TypeFilter<>(CtClass.class)).stream().map(ctClass -> new Reference(ctClass.getQualifiedName(), ReferenceType.CLASS)).collect(Collectors.toSet());
+        return references.stream()
+                .filter(reference -> reference.referenceType() == ReferenceType.CLASS)
+                .filter(reference -> {
+                    Reference testClassReference = new Reference(reference.fullyQualified() + "Test", ReferenceType.CLASS);
+                    return !classes.contains(testClassReference);
+                })
+                .collect(Collectors.toSet());
     }
 }

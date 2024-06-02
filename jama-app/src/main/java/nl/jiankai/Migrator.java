@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import spoon.Launcher;
 import spoon.compiler.ModelBuildingException;
 import spoon.processing.Processor;
+import spoon.reflect.CtModel;
 import spoon.reflect.code.CtFieldAccess;
 import spoon.reflect.code.CtInvocation;
 import spoon.reflect.declaration.CtClass;
@@ -42,7 +43,7 @@ public class Migrator {
     public record Statistics(String project, int totalAffectedClasses, long totalChanges, Set<String> affectedClasses,
                              List<TransformationCount> elementChanges,
                              List<CompilationResult> compilationResults,
-                             TestReport testResults) implements Identifiable {
+                             TestReport testResults, String failureReason) implements Identifiable {
         @Override
         public String getId() {
             return project;
@@ -75,18 +76,36 @@ public class Migrator {
         transformer.addProcessor(statementTransformer.handle());
         transformer.addProcessor(classTransformer.handle());
         transformer.addProcessor(referenceTransformer.handle()); //it's important that class references are migrated last as otherwise other code elements that reference these class references can not be matched anymore
-
-
+        String failureReason = "";
+        Project migratedProject = new CompositeProjectFactory().createProject(outputDirectory);
         try {
             transformer.run();
             tracker.report();
+            determineTestCoverage(tracker, migratedProject);
         } catch (ModelBuildingException e) {
-            LOGGER.warn("The project has errors", e);
+            LOGGER.warn("The project has errors which is possible at this stage and an attempt will be done to fix it", e);
+            failureReason = e.toString();
+            return failureStatistics(toMigrateProject, tracker, "", failureReason);
+        } catch (Exception e) {
+            failureReason = e.toString();
+            return failureStatistics(toMigrateProject, tracker, "", failureReason);
         }
 
-        Project migratedProject = new CompositeProjectFactory().createProject(outputDirectory);
-        List<CompilationResult> compilationResults = compile(migratedProject, toMigrateProject, dependencyProject, newVersion, tracker);
-        TestReport testReport = testAffectedClasses(tracker, migratedProject);
+        List<CompilationResult> compilationResults;
+        TestReport testReport;
+
+        try {
+            compilationResults = compile(migratedProject, toMigrateProject, dependencyProject, newVersion, tracker);
+        } catch (Exception e) {
+            failureReason = e.toString();
+            return failureStatistics(toMigrateProject, tracker, "",failureReason);
+        }
+
+        try {
+            testReport = testAffectedClasses(tracker, migratedProject);
+        } catch (Exception e) {
+            return failureStatistics(toMigrateProject, tracker, e.toString(), e.toString());
+        }
 
         long end = System.currentTimeMillis();
         LOGGER.info("It took {} seconds to migrate {}", (end - start) / 1000, toMigrateProject.getId());
@@ -96,7 +115,32 @@ public class Migrator {
                 tracker.affectedClasses(),
                 tracker.elementChanges().entrySet().stream().map(event -> new Statistics.TransformationCount(event.getKey().transformation(), event.getKey().element(), event.getValue())).toList(),
                 compilationResults,
-                testReport);
+                testReport,
+                failureReason);
+    }
+
+    private static void determineTestCoverage(ElementTransformationTracker tracker, Project migratedProject) {
+        if (!tracker.affectedClasses().isEmpty()) {
+            Set<Reference> classes = tracker.affectedClasses().stream().map(clazz -> new Reference(clazz, ReferenceType.CLASS)).collect(Collectors.toSet());
+            Launcher migratedProjectLauncher = getLauncher(migratedProject);
+            CtModel ctModel = migratedProjectLauncher.buildModel();
+            Set<Reference> classesWithoutTest = new SpoonProjectQuality().getUntestedChanges(classes, ctModel.getRootPackage());
+            double ratioTested = (double) classesWithoutTest.size() / classes.size();
+            if (ratioTested <= 0.5) {
+                LOGGER.info("Ratio of tested classes is less than half: {}", ratioTested);
+            }
+        }
+    }
+
+    private static Statistics failureStatistics(Project toMigrateProject, ElementTransformationTracker tracker, String testFailureReason, String failureReason) {
+        return new Statistics(toMigrateProject.getProjectVersion().toString(),
+                tracker.affectedClasses().size(), tracker.changes(),
+                tracker.affectedClasses(),
+                tracker.elementChanges().entrySet().stream().map(event -> new Statistics.TransformationCount(event.getKey().transformation(), event.getKey().element(), event.getValue())).toList(),
+                new ArrayList<>(),
+                TestReport.failure(testFailureReason),
+                failureReason
+        );
     }
 
     private void collectClassMappings(Collection<Migration> migrations, ElementTransformationTracker tracker) {

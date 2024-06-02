@@ -3,10 +3,7 @@ package nl.jiankai;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import nl.jiankai.api.Identifiable;
-import nl.jiankai.api.Migration;
-import nl.jiankai.api.Refactoring;
-import nl.jiankai.api.RefactoringMiner;
+import nl.jiankai.api.*;
 import nl.jiankai.api.project.Dependency;
 import nl.jiankai.api.project.GitRepository;
 import nl.jiankai.api.project.Project;
@@ -14,13 +11,11 @@ import nl.jiankai.api.project.ProjectData;
 import nl.jiankai.api.storage.CacheService;
 import nl.jiankai.impl.JacksonSerializationService;
 import nl.jiankai.impl.project.git.GitOperationException;
-import nl.jiankai.impl.project.git.JGitRepository;
 import nl.jiankai.impl.project.git.JGitRepositoryFactory;
 import nl.jiankai.impl.storage.MultiFileCacheService;
 import nl.jiankai.migration.MethodMigrationPathEvaluatorImpl;
 import nl.jiankai.refactoringminer.RefactoringMinerImpl;
 import org.apache.commons.io.FileUtils;
-import org.eclipse.jgit.errors.RepositoryNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import spoon.Launcher;
@@ -29,10 +24,11 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static nl.jiankai.spoon.SpoonUtil.getLauncher;
 
@@ -43,17 +39,24 @@ public class Jama {
     //TODO fix generic type is erased and replace with an actual type
     public static void main(String[] args) throws IOException {
         File outputDirectory = new File(BASE_PATH);
-//        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-text"));
-        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-collections"));
+        //collections
+//        String startCommitId = "db18992";
+//        String endCommitId = "6b7cf3f6";
+        //commons-text
+        String startCommitId = "82aecf36";
+        String endCommitId = "bcd37271";
+        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-text"));
+//        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-collections"));
 //        Collection<Migration> migrations = getMigrationPaths(dependencyProject, "82aecf36", "bcd37271"); //commons-text
-        Collection<Migration> migrations = getMigrationPaths(dependencyProject, "db18992", "6b7cf3f6"); //collections
+        Collection<Refactoring> refactorings = getRefactorings(dependencyProject, startCommitId, endCommitId);
+        Collection<Migration> migrations = getMigrationPaths(refactorings);
 //
         LOGGER.info("Found {} migration paths", migrations.size());
         Launcher dependencyLauncher = getLauncher(dependencyProject);
         dependencyLauncher.buildModel();
         LOGGER.info("{} build sucessfully", dependencyProject.getId());
-//        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/plugin-test-repo-2"));
-        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/opencsv-source"));
+        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/plugin-test-repo-2"));
+//        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/opencsv-source"));
 //        File dest = new File(outputDirectory, Paths.get("migrated", "esapi-java-legacy").toS);
 //        FileUtils.copyDirectory(migratedProject.getLocalPath(), dest);
 //        Launcher dependent = getLauncher(new JGitRepositoryFactory().createProject(dest));
@@ -65,10 +68,9 @@ public class Jama {
 //        runPipeline("/home/jiankai/dev/python/commons-collections-dependents.json", outputDirectory, dependencyProject, migrations, dependencyLauncher, "4.0", "4.5.0-SNAPSHOT");
     }
 
-    private static Collection<Migration> getMigrationPaths(GitRepository dependencyProject, String startCommitId, String endCommitId) {
+    private static Collection<Migration> getMigrationPaths(Collection<Refactoring> refactorings) {
         var migrationPathEvaluator = new MethodMigrationPathEvaluatorImpl();
-
-        return migrationPathEvaluator.evaluate(getRefactorings(dependencyProject, startCommitId, endCommitId));
+        return migrationPathEvaluator.evaluate(refactorings);
     }
 
     private static Collection<Refactoring> getRefactorings(GitRepository dependencyProject, String startCommitId, String endCommitId) {
