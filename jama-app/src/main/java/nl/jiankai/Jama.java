@@ -47,7 +47,6 @@ public class Jama {
         String endCommitId = "bcd37271";
         GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-text"));
 //        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-collections"));
-//        Collection<Migration> migrations = getMigrationPaths(dependencyProject, "82aecf36", "bcd37271"); //commons-text
         Collection<Refactoring> refactorings = getRefactorings(dependencyProject, startCommitId, endCommitId);
         Collection<Migration> migrations = getMigrationPaths(refactorings);
 //
@@ -57,14 +56,9 @@ public class Jama {
         LOGGER.info("{} build sucessfully", dependencyProject.getId());
         GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/plugin-test-repo-2"));
 //        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/opencsv-source"));
-//        File dest = new File(outputDirectory, Paths.get("migrated", "esapi-java-legacy").toS);
-//        FileUtils.copyDirectory(migratedProject.getLocalPath(), dest);
-//        Launcher dependent = getLauncher(new JGitRepositoryFactory().createProject(dest));
-//        boolean build = dependent.getModelBuilder().build();
-//        System.out.println(build);
 //        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-text"));
-        migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "4.5.0-SNAPSHOT"); //collections
-//        migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "1.11.1-SNAPSHOT"); //commons-text
+//        migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "4.5.0-SNAPSHOT"); //collections
+        migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "1.11.1-SNAPSHOT"); //commons-text
 //        runPipeline("/home/jiankai/dev/python/commons-collections-dependents.json", outputDirectory, dependencyProject, migrations, dependencyLauncher, "4.0", "4.5.0-SNAPSHOT");
     }
 

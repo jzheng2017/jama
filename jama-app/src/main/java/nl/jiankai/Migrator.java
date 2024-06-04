@@ -2,11 +2,12 @@ package nl.jiankai;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import nl.jiankai.api.*;
+import nl.jiankai.api.project.Dependency;
 import nl.jiankai.api.project.Project;
+import nl.jiankai.api.project.ProjectCoordinate;
 import nl.jiankai.api.project.TestReport;
 import nl.jiankai.compiler.CompilationResult;
 import nl.jiankai.impl.project.CompositeProjectFactory;
-import nl.jiankai.impl.project.git.JGitRepositoryFactory;
 import nl.jiankai.operators.*;
 import nl.jiankai.spoon.*;
 import nl.jiankai.spoon.transformations.SpoonTransformationProvider;
@@ -81,6 +82,7 @@ public class Migrator {
         try {
             transformer.run();
             tracker.report();
+            upgradeMigratedProject(dependencyProject, newVersion, migratedProject);
             determineTestCoverage(tracker, migratedProject);
         } catch (ModelBuildingException e) {
             LOGGER.warn("The project has errors which is possible at this stage and an attempt will be done to fix it", e);
@@ -95,7 +97,7 @@ public class Migrator {
         TestReport testReport;
 
         try {
-            compilationResults = compile(migratedProject, toMigrateProject, dependencyProject, newVersion, tracker);
+            compilationResults = compile(migratedProject, toMigrateProject, tracker);
         } catch (Exception e) {
             failureReason = e.toString();
             return failureStatistics(toMigrateProject, tracker, "",failureReason);
@@ -119,6 +121,12 @@ public class Migrator {
                 failureReason);
     }
 
+    private static void upgradeMigratedProject(Project dependencyProject, String newVersion, Project migratedProject) {
+        ProjectCoordinate coord = dependencyProject.getProjectVersion().coordinate();
+        migratedProject.upgradeDependency(new Dependency(coord.groupId(), coord.artifactId(), newVersion));
+        migratedProject.install();
+    }
+
     private static void determineTestCoverage(ElementTransformationTracker tracker, Project migratedProject) {
         if (!tracker.affectedClasses().isEmpty()) {
             Set<Reference> classes = tracker.affectedClasses().stream().map(clazz -> new Reference(clazz, ReferenceType.CLASS)).collect(Collectors.toSet());
@@ -126,8 +134,9 @@ public class Migrator {
             CtModel ctModel = migratedProjectLauncher.buildModel();
             Set<Reference> classesWithoutTest = new SpoonProjectQuality().getUntestedChanges(classes, ctModel.getRootPackage());
             double ratioTested = (double) classesWithoutTest.size() / classes.size();
-            if (ratioTested <= 0.5) {
-                LOGGER.info("Ratio of tested classes is less than half: {}", ratioTested);
+            if (ratioTested >= 0.5) {
+                LOGGER.info("Ratio of tested classes is less than half: {}. Stopping migration..", ratioTested);
+                throw new RuntimeException("Ratio of tested classes is less than half: %s".formatted(ratioTested));
             }
         }
     }
@@ -173,6 +182,7 @@ public class Migrator {
     private void setup(Project toMigrateProject, Project dependencyProject) {
         try {
             FileUtils.deleteDirectory(outputDirectory);
+            FileUtils.deleteDirectory(new File(outputDirectory.getAbsolutePath() + "_tmp"));
             FileUtils.copyDirectory(toMigrateProject.getLocalPath(), outputDirectory);
             //delete caching from older version before migration
             FileUtils.deleteQuietly(new File(outputDirectory, "spoon.classpath.tmp"));

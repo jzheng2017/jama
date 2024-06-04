@@ -5,7 +5,6 @@ import nl.jiankai.api.*;
 import nl.jiankai.api.project.Dependency;
 import nl.jiankai.api.project.Project;
 import nl.jiankai.api.project.ProjectCoordinate;
-import nl.jiankai.impl.project.CompositeProjectFactory;
 import nl.jiankai.spoon.SpoonClassTransformer;
 import nl.jiankai.spoon.SpoonMethodCallTransformer;
 import nl.jiankai.spoon.SpoonTransformer;
@@ -46,19 +45,14 @@ public class JDTCompilerProblemSolver {
     public static final int CANNOT_BE_RESOLVED_TO_A_TYPE = 16777218;
     public static final int UNHANDLED_EXCEPTION = 16777384;
 
-    public static List<CompilationResult> compile(Project migratedProject, Project originalProject, Project dependencyProject, String newVersion, ElementTransformationTracker tracker) {
-        ProjectCoordinate coord = dependencyProject.getProjectVersion().coordinate();
-
-        migratedProject.upgradeDependency(new Dependency(coord.groupId(), coord.artifactId(), newVersion));
-        migratedProject.install();
-
-        List<CompilationResult> result = compile(originalProject, migratedProject, 1, tracker, new ArrayList<>());
+    public static List<CompilationResult> compile(Project migratedProject, Project originalProject, ElementTransformationTracker tracker) {
+        List<CompilationResult> result = compile(migratedProject, originalProject, 1, tracker, new ArrayList<>());
         tracker.report();
         return result;
     }
 
-    public static List<CompilationResult> compile(Project originalProject, Project migratedProject, int iterations,
-                                               ElementTransformationTracker tracker,
+    public static List<CompilationResult> compile(Project migratedProject, Project originalProject, int iterations,
+                                                  ElementTransformationTracker tracker,
                                                   List<CompilationResult> results) {
         if (iterations > MAX_ITERATIONS) {
             return results;
@@ -133,7 +127,7 @@ public class JDTCompilerProblemSolver {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        compile(originalProject, migratedProject, iterations + 1, tracker, results);
+        compile(migratedProject, originalProject, iterations + 1, tracker, results);
     }
 
     private static void solve(CategorizedProblem categorizedProblem, TransformationProvider<CtClass> classTransformationProvider, TransformationProvider<CtInvocation> methodCallTransformationProvider, ElementTransformationTracker tracker) {
