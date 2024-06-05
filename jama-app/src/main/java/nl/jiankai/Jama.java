@@ -40,13 +40,13 @@ public class Jama {
     public static void main(String[] args) throws IOException {
         File outputDirectory = new File(BASE_PATH);
         //collections
-//        String startCommitId = "db18992";
-//        String endCommitId = "6b7cf3f6";
+        String startCommitId = "db18992";
+        String endCommitId = "6b7cf3f6";
         //commons-text
-        String startCommitId = "82aecf36";
-        String endCommitId = "bcd37271";
-        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-text"));
-//        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-collections"));
+//        String startCommitId = "82aecf36";
+//        String endCommitId = "bcd37271";
+//        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-text"));
+        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-collections"));
         Collection<Refactoring> refactorings = getRefactorings(dependencyProject, startCommitId, endCommitId);
         Collection<Migration> migrations = getMigrationPaths(refactorings);
 //
@@ -54,11 +54,11 @@ public class Jama {
         Launcher dependencyLauncher = getLauncher(dependencyProject);
         dependencyLauncher.buildModel();
         LOGGER.info("{} build sucessfully", dependencyProject.getId());
-        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/plugin-test-repo-2"));
-//        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/opencsv-source"));
+//        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/plugin-test-repo-2"));
+        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/opencsv-source"));
 //        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-text"));
-//        migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "4.5.0-SNAPSHOT"); //collections
-        migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "1.11.1-SNAPSHOT"); //commons-text
+        migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "4.5.0-SNAPSHOT"); //collections
+//        migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "1.11.1-SNAPSHOT"); //commons-text
 //        runPipeline("/home/jiankai/dev/python/commons-collections-dependents.json", outputDirectory, dependencyProject, migrations, dependencyLauncher, "4.0", "4.5.0-SNAPSHOT");
     }
 

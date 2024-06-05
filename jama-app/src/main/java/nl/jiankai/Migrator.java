@@ -41,7 +41,7 @@ public class Migrator {
     }
 
     @JsonIgnoreProperties({"id"})
-    public record Statistics(String project, int totalAffectedClasses, long totalChanges, Set<String> affectedClasses,
+    public record Statistics(String project, int totalAffectedClasses, long totalChanges, Set<String> affectedClasses, Set<String> untestedClasses,
                              List<TransformationCount> elementChanges,
                              List<CompilationResult> compilationResults,
                              TestReport testResults, String failureReason) implements Identifiable {
@@ -78,19 +78,24 @@ public class Migrator {
         transformer.addProcessor(classTransformer.handle());
         transformer.addProcessor(referenceTransformer.handle()); //it's important that class references are migrated last as otherwise other code elements that reference these class references can not be matched anymore
         String failureReason = "";
+        Set<String> untestedClasses = Set.of();
         Project migratedProject = new CompositeProjectFactory().createProject(outputDirectory);
+
         try {
             transformer.run();
             tracker.report();
             upgradeMigratedProject(dependencyProject, newVersion, migratedProject);
-            determineTestCoverage(tracker, migratedProject);
+            untestedClasses = determineTestCoverage(tracker, migratedProject);
         } catch (ModelBuildingException e) {
             LOGGER.warn("The project has errors which is possible at this stage and an attempt will be done to fix it", e);
             failureReason = e.toString();
-            return failureStatistics(toMigrateProject, tracker, "", failureReason);
+            return failureStatistics(toMigrateProject, tracker, untestedClasses,"", failureReason);
+        } catch (LowTestCoverageException e) {
+            failureReason = e.toString();
+            return failureStatistics(toMigrateProject, tracker, e.getUntestedClasses(), "", failureReason);
         } catch (Exception e) {
             failureReason = e.toString();
-            return failureStatistics(toMigrateProject, tracker, "", failureReason);
+            return failureStatistics(toMigrateProject, tracker, untestedClasses,"", failureReason);
         }
 
         List<CompilationResult> compilationResults;
@@ -100,13 +105,13 @@ public class Migrator {
             compilationResults = compile(migratedProject, toMigrateProject, tracker);
         } catch (Exception e) {
             failureReason = e.toString();
-            return failureStatistics(toMigrateProject, tracker, "",failureReason);
+            return failureStatistics(toMigrateProject, tracker, untestedClasses,"",failureReason);
         }
 
         try {
             testReport = testAffectedClasses(tracker, migratedProject);
         } catch (Exception e) {
-            return failureStatistics(toMigrateProject, tracker, e.toString(), e.toString());
+            return failureStatistics(toMigrateProject, tracker, untestedClasses, e.toString(), e.toString());
         }
 
         long end = System.currentTimeMillis();
@@ -115,6 +120,7 @@ public class Migrator {
                 migratedProject.getProjectVersion().toString(),
                 tracker.affectedClasses().size(), tracker.changes(),
                 tracker.affectedClasses(),
+                untestedClasses,
                 tracker.elementChanges().entrySet().stream().map(event -> new Statistics.TransformationCount(event.getKey().transformation(), event.getKey().element(), event.getValue())).toList(),
                 compilationResults,
                 testReport,
@@ -127,24 +133,38 @@ public class Migrator {
         migratedProject.install();
     }
 
-    private static void determineTestCoverage(ElementTransformationTracker tracker, Project migratedProject) {
+    private static Set<String> determineTestCoverage(ElementTransformationTracker tracker, Project migratedProject) {
         if (!tracker.affectedClasses().isEmpty()) {
             Set<Reference> classes = tracker.affectedClasses().stream().map(clazz -> new Reference(clazz, ReferenceType.CLASS)).collect(Collectors.toSet());
             Launcher migratedProjectLauncher = getLauncher(migratedProject);
             CtModel ctModel = migratedProjectLauncher.buildModel();
-            Set<Reference> classesWithoutTest = new SpoonProjectQuality().getUntestedChanges(classes, ctModel.getRootPackage());
+            Set<String> classesWithoutTest = new SpoonProjectQuality().getUntestedChanges(classes, ctModel.getRootPackage()).stream().map(Reference::fullyQualified).collect(Collectors.toSet());
             double ratioTested = (double) classesWithoutTest.size() / classes.size();
             if (ratioTested >= 0.5) {
-                LOGGER.info("Ratio of tested classes is less than half: {}. Stopping migration..", ratioTested);
-                throw new RuntimeException("Ratio of tested classes is less than half: %s".formatted(ratioTested));
+                LOGGER.info("{} out of {} ({}%) classes are not covered by tests which is higher than the threshold (at least 50%)",classesWithoutTest.size(), classes.size(), ratioTested*100);
+                throw new LowTestCoverageException(classesWithoutTest);
             }
+            return classesWithoutTest;
+        }
+        return Set.of();
+    }
+
+    private static class LowTestCoverageException extends RuntimeException {
+        private Set<String> untestedClasses;
+        public LowTestCoverageException(Set<String> untestedClasses) {
+            this.untestedClasses = untestedClasses;
+        }
+
+        public Set<String> getUntestedClasses() {
+            return untestedClasses;
         }
     }
 
-    private static Statistics failureStatistics(Project toMigrateProject, ElementTransformationTracker tracker, String testFailureReason, String failureReason) {
+    private static Statistics failureStatistics(Project toMigrateProject, ElementTransformationTracker tracker, Set<String> untestedClasses, String testFailureReason, String failureReason) {
         return new Statistics(toMigrateProject.getProjectVersion().toString(),
                 tracker.affectedClasses().size(), tracker.changes(),
                 tracker.affectedClasses(),
+                untestedClasses,
                 tracker.elementChanges().entrySet().stream().map(event -> new Statistics.TransformationCount(event.getKey().transformation(), event.getKey().element(), event.getValue())).toList(),
                 new ArrayList<>(),
                 TestReport.failure(testFailureReason),
