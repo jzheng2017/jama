@@ -22,44 +22,72 @@ import spoon.Launcher;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import static nl.jiankai.spoon.SpoonUtil.getLauncher;
 
 public class Jama {
     private static final Logger LOGGER = LoggerFactory.getLogger(Jama.class);
-    public static final String BASE_PATH = "/home/jiankai/test";
+    public static final Path BASE_PATH = Paths.get("").toAbsolutePath();
 
     //TODO fix generic type is erased and replace with an actual type
     public static void main(String[] args) throws IOException {
-        File outputDirectory = new File(BASE_PATH);
-        //collections
-        String startCommitId = "db18992";
-        String endCommitId = "6b7cf3f6";
-        //commons-text
-//        String startCommitId = "82aecf36";
-//        String endCommitId = "bcd37271";
-//        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-text"));
-        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-collections"));
+        pipeline();
+    }
+
+    private static void pipeline() throws IOException {
+        File outputDirectory = BASE_PATH.toFile();
+        String[] inputParams = FileUtils.readFileToString(new File("input.txt")).split(";");
+        String dependencyProjectUrl = inputParams[0];
+        String startCommitId = inputParams[1];
+        String endCommitId = inputParams[2];
+        String oldVersion = "4.0";
+        String newVersion = "4.5.0-SNAPSHOT";
+        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(dependencyProjectUrl, new File(outputDirectory, "dependency"));
+        dependencyProject.checkout(endCommitId);
         Collection<Refactoring> refactorings = getRefactorings(dependencyProject, startCommitId, endCommitId);
         Collection<Migration> migrations = getMigrationPaths(refactorings);
-//
         LOGGER.info("Found {} migration paths", migrations.size());
         Launcher dependencyLauncher = getLauncher(dependencyProject);
         dependencyLauncher.buildModel();
         LOGGER.info("{} build sucessfully", dependencyProject.getId());
-//        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/plugin-test-repo-2"));
-        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/opencsv-source"));
-//        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-text"));
+        runPipeline("deps.json", outputDirectory, dependencyProject, migrations, dependencyLauncher, oldVersion, newVersion);
+    }
+
+    private static void commonsCollection() {
+        File outputDirectory = BASE_PATH.toFile();
+        String startCommitId = "db18992";
+        String endCommitId = "6b7cf3f6";
+        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-collections"));
+        dependencyProject.checkout(endCommitId);
+        Collection<Refactoring> refactorings = getRefactorings(dependencyProject, startCommitId, endCommitId);
+        Collection<Migration> migrations = getMigrationPaths(refactorings);
+        LOGGER.info("Found {} migration paths", migrations.size());
+        Launcher dependencyLauncher = getLauncher(dependencyProject);
+        dependencyLauncher.buildModel();
+        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/ysoserialinject"));
         migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "4.5.0-SNAPSHOT"); //collections
-//        migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "1.11.1-SNAPSHOT"); //commons-text
-//        runPipeline("/home/jiankai/dev/python/commons-collections-dependents.json", outputDirectory, dependencyProject, migrations, dependencyLauncher, "4.0", "4.5.0-SNAPSHOT");
+    }
+
+    private static void commonsText() {
+        File outputDirectory = BASE_PATH.toFile();
+        String startCommitId = "82aecf36";
+        String endCommitId = "bcd37271";
+        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-text"));
+        dependencyProject.checkout(endCommitId);
+        Collection<Refactoring> refactorings = getRefactorings(dependencyProject, startCommitId, endCommitId);
+        Collection<Migration> migrations = getMigrationPaths(refactorings);
+        LOGGER.info("Found {} migration paths", migrations.size());
+        Launcher dependencyLauncher = getLauncher(dependencyProject);
+        dependencyLauncher.buildModel();
+        LOGGER.info("{} build sucessfully", dependencyProject.getId());
+        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/plugin-test-repo-2"));
+        migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "1.11.1-SNAPSHOT"); //commons-text
     }
 
     private static Collection<Migration> getMigrationPaths(Collection<Refactoring> refactorings) {
@@ -96,7 +124,7 @@ public class Jama {
                     .readValue(new File(repoFile), new TypeReference<List<Repo>>() {
                     })
                     .parallelStream()
-                    .filter(repo -> repo.stars > 5 && repo.stars < 10)
+                    .filter(repo -> repo.stars > 5)
                     .map(repo -> {
                         File repoDirectory = createRepoDirectory(outputDirectory, repo);
                         try {
@@ -128,7 +156,7 @@ public class Jama {
                         }
                     });
         } finally {
-            FileUtils.deleteDirectory(new File(BASE_PATH, "migrated"));
+            FileUtils.deleteDirectory(new File(BASE_PATH.toFile(), "migrated"));
         }
     }
 
@@ -142,7 +170,7 @@ public class Jama {
         File sourceDirectory = sourceDirectories.iterator().next();
         final boolean srcDirectoryInRoot = sourceDirectory.getParentFile().equals(repo.getLocalPath());
 
-        return repo.hasDependency(createDependency(dependencyProject.getProjectVersion(), oldVersion)) && srcDirectoryInRoot;
+        return repo.isOlderDependency(createDependency(dependencyProject.getProjectVersion(), oldVersion)) && srcDirectoryInRoot;
     }
 
     private static void deleteRepo(File repoDirectory) {
@@ -160,7 +188,7 @@ public class Jama {
     private static void migrate(Project migratedProject, Project dependencyProject, File outputDirectory, Collection<Migration> migrations, Launcher dependencyLauncher, String newVersion) {
         Migrator migrator = new Migrator(new File(outputDirectory, Paths.get("migrated", migratedProject.getLocalPath().getName()).toString()));
         Migrator.Statistics statistics = migrator.migrate(migratedProject, dependencyProject, migrations, dependencyLauncher, newVersion);
-        CacheService<Migrator.Statistics> cacheService = new MultiFileCacheService<>(new File(BASE_PATH, Paths.get("results", LocalDate.now().toString()).toString()).toString(), new JacksonSerializationService(), Migrator.Statistics.class);
+        CacheService<Migrator.Statistics> cacheService = new MultiFileCacheService<>(new File(BASE_PATH.toFile(), Paths.get("results", LocalDate.now().toString()).toString()).toString(), new JacksonSerializationService(), Migrator.Statistics.class);
         cacheService.write(statistics);
     }
 

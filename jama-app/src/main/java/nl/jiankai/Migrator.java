@@ -44,7 +44,7 @@ public class Migrator {
     public record Statistics(String project, int totalAffectedClasses, long totalChanges, Set<String> affectedClasses, Set<String> untestedClasses,
                              List<TransformationCount> elementChanges,
                              List<CompilationResult> compilationResults,
-                             TestReport testResults, String failureReason) implements Identifiable {
+                             TestReport testResults, String failureReason, long runTimeMs) implements Identifiable {
         @Override
         public String getId() {
             return project;
@@ -89,13 +89,13 @@ public class Migrator {
         } catch (ModelBuildingException e) {
             LOGGER.warn("The project has errors which is possible at this stage and an attempt will be done to fix it", e);
             failureReason = e.toString();
-            return failureStatistics(toMigrateProject, tracker, untestedClasses,"", failureReason);
+            return failureStatistics(toMigrateProject, tracker, untestedClasses,"", failureReason, start);
         } catch (LowTestCoverageException e) {
             failureReason = e.toString();
-            return failureStatistics(toMigrateProject, tracker, e.getUntestedClasses(), "", failureReason);
+            return failureStatistics(toMigrateProject, tracker, e.getUntestedClasses(), "", failureReason, start);
         } catch (Exception e) {
             failureReason = e.toString();
-            return failureStatistics(toMigrateProject, tracker, untestedClasses,"", failureReason);
+            return failureStatistics(toMigrateProject, tracker, untestedClasses,"", failureReason, start);
         }
 
         List<CompilationResult> compilationResults;
@@ -105,13 +105,13 @@ public class Migrator {
             compilationResults = compile(migratedProject, toMigrateProject, tracker);
         } catch (Exception e) {
             failureReason = e.toString();
-            return failureStatistics(toMigrateProject, tracker, untestedClasses,"",failureReason);
+            return failureStatistics(toMigrateProject, tracker, untestedClasses,"",failureReason, start);
         }
 
         try {
             testReport = testAffectedClasses(tracker, migratedProject);
         } catch (Exception e) {
-            return failureStatistics(toMigrateProject, tracker, untestedClasses, e.toString(), e.toString());
+            return failureStatistics(toMigrateProject, tracker, untestedClasses, e.toString(), e.toString(), start);
         }
 
         long end = System.currentTimeMillis();
@@ -124,7 +124,9 @@ public class Migrator {
                 tracker.elementChanges().entrySet().stream().map(event -> new Statistics.TransformationCount(event.getKey().transformation(), event.getKey().element(), event.getValue())).toList(),
                 compilationResults,
                 testReport,
-                failureReason);
+                failureReason,
+                end-start
+        );
     }
 
     private static void upgradeMigratedProject(Project dependencyProject, String newVersion, Project migratedProject) {
@@ -160,7 +162,7 @@ public class Migrator {
         }
     }
 
-    private static Statistics failureStatistics(Project toMigrateProject, ElementTransformationTracker tracker, Set<String> untestedClasses, String testFailureReason, String failureReason) {
+    private static Statistics failureStatistics(Project toMigrateProject, ElementTransformationTracker tracker, Set<String> untestedClasses, String testFailureReason, String failureReason, long startTime) {
         return new Statistics(toMigrateProject.getProjectVersion().toString(),
                 tracker.affectedClasses().size(), tracker.changes(),
                 tracker.affectedClasses(),
@@ -168,7 +170,8 @@ public class Migrator {
                 tracker.elementChanges().entrySet().stream().map(event -> new Statistics.TransformationCount(event.getKey().transformation(), event.getKey().element(), event.getValue())).toList(),
                 new ArrayList<>(),
                 TestReport.failure(testFailureReason),
-                failureReason
+                failureReason,
+                System.currentTimeMillis()-startTime
         );
     }
 

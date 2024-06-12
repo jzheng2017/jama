@@ -21,6 +21,19 @@
 
   <dependencies>
     <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven</groupId>
+      <artifactId>maven-artifact</artifactId>
+      <version>3.9.6</version>
+    </dependency>
+    <dependency>
       <groupId>org.jboss.shrinkwrap.resolver</groupId>
       <artifactId>shrinkwrap-resolver-api-maven</artifactId>
       <version>3.2.1</version>
@@ -51,5 +64,11 @@
       <version>6.7.0.202309050840-r</version>
     </dependency>
   </dependencies>
+  <repositories>
+    <repository>
+      <id>maven2</id>
+      <url>https://repo.maven.apache.org/maven2/</url>
+    </repository>
+  </repositories>
 
 </project>

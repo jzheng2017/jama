@@ -8,7 +8,6 @@ import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.visitor.filter.TypeFilter;
 
 import java.util.Set;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class SpoonProjectQuality implements ProjectQuality<CtPackage> {

@@ -4,6 +4,7 @@ package nl.jiankai.impl.project.maven;
 import nl.jiankai.api.project.*;
 import nl.jiankai.util.FileUtil;
 import org.apache.commons.io.filefilter.NameFileFilter;
+import org.apache.maven.artifact.versioning.ComparableVersion;
 import org.apache.maven.shared.invoker.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -106,6 +107,15 @@ public class MavenProject implements Project {
     @Override
     public boolean hasDependency(Dependency dependency) {
         return resolve().contains(dependency);
+    }
+
+    @Override
+    public boolean isOlderDependency(Dependency dependency) {
+        return resolve()
+                .stream()
+                .anyMatch(actualDependency -> actualDependency.groupId().equals(dependency.groupId()) &&
+                        actualDependency.artifactId().equals(dependency.artifactId()) &&
+                        (new ComparableVersion(actualDependency.version()).compareTo(new ComparableVersion(dependency.version())) >= 0));
     }
 
     @Override

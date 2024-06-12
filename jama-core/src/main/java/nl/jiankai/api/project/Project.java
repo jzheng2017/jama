@@ -42,6 +42,8 @@ public interface Project extends Identifiable {
      */
     boolean hasDependency(Dependency dependency);
 
+    boolean isOlderDependency(Dependency dependency);
+
     /**
      * Upgrade a dependency
      * @param dependency the dependency

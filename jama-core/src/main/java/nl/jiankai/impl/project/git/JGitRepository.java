@@ -72,6 +72,11 @@ public class JGitRepository implements GitRepository {
     }
 
     @Override
+    public boolean isOlderDependency(Dependency dependency) {
+        return project.isOlderDependency(dependency);
+    }
+
+    @Override
     public void upgradeDependency(Dependency dependency) {
         project.upgradeDependency(dependency);
     }
