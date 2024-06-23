@@ -84,9 +84,10 @@ public class SpoonTransformer implements Transformer<Processor<?>> {
     private void moveFileToTestDirectory(File file) {
         File destination = new File(file.toString().replace("/src/main/java", "/src/test/java"));
         try {
+            destination.mkdirs();
             Files.move(file, destination);
         } catch (IOException e) {
-            LOGGER.warn("Could not move {} to {}", file, destination);
+            LOGGER.warn("Could not move {} to {}. Reason: {}", file, destination, e.getMessage());
         }
     }
 

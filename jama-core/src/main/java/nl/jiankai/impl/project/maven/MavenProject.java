@@ -130,6 +130,12 @@ public class MavenProject implements Project {
 
     @Override
     public Collection<File> getSourceDirectories() {
+        File sourceDirectory = new File(getLocalPath(), "src");
+
+        if (sourceDirectory.exists() && sourceDirectory.isDirectory()) {
+            return Collections.singletonList(sourceDirectory);
+        }
+
         return FileUtil
                 .findFileRecursive(getLocalPath(), "pom.xml", "")
                 .stream()

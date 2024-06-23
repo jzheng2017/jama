@@ -7,6 +7,7 @@ import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.visitor.filter.TypeFilter;
 
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -14,7 +15,7 @@ public class SpoonProjectQuality implements ProjectQuality<CtPackage> {
 
     @Override
     public Set<Reference> getUntestedChanges(Set<Reference> references, CtPackage source) {
-        Set<Reference> classes = source.getElements(new TypeFilter<>(CtClass.class)).stream().map(ctClass -> new Reference(ctClass.getQualifiedName(), ReferenceType.CLASS)).collect(Collectors.toSet());
+        List<CtClass> classes = source.getElements(new TypeFilter<>(CtClass.class)).stream().toList();
         return references.stream()
                 .filter(reference -> reference.referenceType() == ReferenceType.CLASS)
                 .filter(reference -> {

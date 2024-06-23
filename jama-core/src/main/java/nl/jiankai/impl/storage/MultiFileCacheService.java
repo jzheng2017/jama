@@ -19,9 +19,9 @@ import java.util.stream.Collectors;
 public class MultiFileCacheService<T extends Identifiable> implements CacheService<T> {
     private static final Logger LOGGER = LoggerFactory.getLogger(MultiFileCacheService.class);
     private final String baseLocation;
-    private SerializationService serializationService;
-    private Map<String, T> cache = new HashMap<>();
-    private Class<T> entityClassType;
+    private final SerializationService serializationService;
+    private final Map<String, T> cache = new HashMap<>();
+    private final Class<T> entityClassType;
 
     public MultiFileCacheService(String baseLocation, SerializationService serializationService, Class<T> entityClassType) {
         this.baseLocation = baseLocation;

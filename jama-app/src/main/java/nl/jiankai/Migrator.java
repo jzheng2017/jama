@@ -7,6 +7,7 @@ import nl.jiankai.api.project.Project;
 import nl.jiankai.api.project.ProjectCoordinate;
 import nl.jiankai.api.project.TestReport;
 import nl.jiankai.compiler.CompilationResult;
+import nl.jiankai.compiler.JDTCompilerProblemSolver;
 import nl.jiankai.impl.project.CompositeProjectFactory;
 import nl.jiankai.operators.*;
 import nl.jiankai.spoon.*;
@@ -23,6 +24,7 @@ import spoon.reflect.code.CtInvocation;
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.factory.Factory;
 import spoon.reflect.reference.CtTypeReference;
+import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
 
 import java.io.File;
 import java.io.IOException;
@@ -43,7 +45,9 @@ public class Migrator {
     @JsonIgnoreProperties({"id"})
     public record Statistics(String project, int totalAffectedClasses, long totalChanges, Set<String> affectedClasses, Set<String> untestedClasses,
                              List<TransformationCount> elementChanges,
-                             List<CompilationResult> compilationResults,
+                             CompilationResult compilationResultBeforeTransformation,
+                             CompilationResult compilationResultAfterTransformation,
+                             List<CompilationResult> compilationResultsDuringCompilationPhase,
                              TestReport testResults, String failureReason, long runTimeMs) implements Identifiable {
         @Override
         public String getId() {
@@ -80,22 +84,28 @@ public class Migrator {
         String failureReason = "";
         Set<String> untestedClasses = Set.of();
         Project migratedProject = new CompositeProjectFactory().createProject(outputDirectory);
-
+        boolean lowCoverage = false;
+        CompilationResult resultBeforeTransformation = compileAndGetCompilationResult(migratedProject);
+        CompilationResult resultAfterTransformation;
         try {
             transformer.run();
+            resultAfterTransformation = compileAndGetCompilationResult(migratedProject);
             tracker.report();
             upgradeMigratedProject(dependencyProject, newVersion, migratedProject);
             untestedClasses = determineTestCoverage(tracker, migratedProject);
         } catch (ModelBuildingException e) {
             LOGGER.warn("The project has errors which is possible at this stage and an attempt will be done to fix it", e);
             failureReason = e.toString();
-            return failureStatistics(toMigrateProject, tracker, untestedClasses,"", failureReason, start);
+            resultAfterTransformation = compileAndGetCompilationResult(migratedProject);
+            return failureStatistics(toMigrateProject, tracker, untestedClasses,"", failureReason, start, resultBeforeTransformation, resultAfterTransformation);
         } catch (LowTestCoverageException e) {
             failureReason = e.toString();
-            return failureStatistics(toMigrateProject, tracker, e.getUntestedClasses(), "", failureReason, start);
+            lowCoverage = true;
+            resultAfterTransformation = compileAndGetCompilationResult(migratedProject);
         } catch (Exception e) {
             failureReason = e.toString();
-            return failureStatistics(toMigrateProject, tracker, untestedClasses,"", failureReason, start);
+            resultAfterTransformation = compileAndGetCompilationResult(migratedProject);
+            return failureStatistics(toMigrateProject, tracker, untestedClasses,"", failureReason, start, resultBeforeTransformation, resultAfterTransformation);
         }
 
         List<CompilationResult> compilationResults;
@@ -105,28 +115,35 @@ public class Migrator {
             compilationResults = compile(migratedProject, toMigrateProject, tracker);
         } catch (Exception e) {
             failureReason = e.toString();
-            return failureStatistics(toMigrateProject, tracker, untestedClasses,"",failureReason, start);
+            return failureStatistics(toMigrateProject, tracker, untestedClasses,"",failureReason, start, resultBeforeTransformation, resultAfterTransformation);
         }
 
-        try {
-            testReport = testAffectedClasses(tracker, migratedProject);
-        } catch (Exception e) {
-            return failureStatistics(toMigrateProject, tracker, untestedClasses, e.toString(), e.toString(), start);
-        }
+        if (lowCoverage) {
+            return failureStatistics(toMigrateProject, tracker, untestedClasses,"No tests were ran as there were too few tests",failureReason, start, resultBeforeTransformation, resultAfterTransformation);
+        } else {
+            try {
+                testReport = testAffectedClasses(tracker, migratedProject);
+            } catch (Exception e) {
+                return failureStatistics(toMigrateProject, tracker, untestedClasses, e.toString(), e.toString(), start, resultBeforeTransformation, resultAfterTransformation);
+            }
 
-        long end = System.currentTimeMillis();
-        LOGGER.info("It took {} seconds to migrate {}", (end - start) / 1000, toMigrateProject.getId());
-        return new Statistics(
-                migratedProject.getProjectVersion().toString(),
-                tracker.affectedClasses().size(), tracker.changes(),
-                tracker.affectedClasses(),
-                untestedClasses,
-                tracker.elementChanges().entrySet().stream().map(event -> new Statistics.TransformationCount(event.getKey().transformation(), event.getKey().element(), event.getValue())).toList(),
-                compilationResults,
-                testReport,
-                failureReason,
-                end-start
-        );
+
+            long end = System.currentTimeMillis();
+            LOGGER.info("It took {} seconds to migrate {}", (end - start) / 1000, toMigrateProject.getId());
+            return new Statistics(
+                    migratedProject.getProjectVersion().toString(),
+                    tracker.affectedClasses().size(), tracker.changes(),
+                    tracker.affectedClasses(),
+                    untestedClasses,
+                    tracker.elementChanges().entrySet().stream().map(event -> new Statistics.TransformationCount(event.getKey().transformation(), event.getKey().element(), event.getValue())).toList(),
+                    resultBeforeTransformation,
+                    resultAfterTransformation,
+                    compilationResults,
+                    testReport,
+                    failureReason,
+                    end - start
+            );
+        }
     }
 
     private static void upgradeMigratedProject(Project dependencyProject, String newVersion, Project migratedProject) {
@@ -162,12 +179,27 @@ public class Migrator {
         }
     }
 
-    private static Statistics failureStatistics(Project toMigrateProject, ElementTransformationTracker tracker, Set<String> untestedClasses, String testFailureReason, String failureReason, long startTime) {
+    private CompilationResult compileAndGetCompilationResult(Project project) {
+        Launcher launcher = getLauncher(project);
+        JDTBasedSpoonCompiler modelBuilder = (JDTBasedSpoonCompiler) launcher.getModelBuilder();
+        try {
+            modelBuilder.build();
+            return JDTCompilerProblemSolver.createCompilationResult(0, modelBuilder);
+        } catch (Exception e) {
+            return JDTCompilerProblemSolver.createCompilationResult(0, modelBuilder);
+        }
+    }
+
+    private static Statistics failureStatistics(Project toMigrateProject, ElementTransformationTracker tracker,
+                                                Set<String> untestedClasses, String testFailureReason, String failureReason, long startTime,
+                                                CompilationResult compilationResultBeforeTransformation, CompilationResult compilationResultAfterTransformation) {
         return new Statistics(toMigrateProject.getProjectVersion().toString(),
                 tracker.affectedClasses().size(), tracker.changes(),
                 tracker.affectedClasses(),
                 untestedClasses,
                 tracker.elementChanges().entrySet().stream().map(event -> new Statistics.TransformationCount(event.getKey().transformation(), event.getKey().element(), event.getValue())).toList(),
+                compilationResultBeforeTransformation,
+                compilationResultAfterTransformation,
                 new ArrayList<>(),
                 TestReport.failure(testFailureReason),
                 failureReason,

@@ -16,6 +16,7 @@ import nl.jiankai.spoon.transformations.method.RemoveMethodCallTransformation;
 import nl.jiankai.util.FileUtil;
 import org.apache.commons.io.FileUtils;
 import org.eclipse.jdt.core.compiler.CategorizedProblem;
+import org.eclipse.jdt.core.compiler.IProblem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import spoon.Launcher;
@@ -36,7 +37,7 @@ import static nl.jiankai.spoon.SpoonUtil.getLauncher;
 
 public class JDTCompilerProblemSolver {
     private static final Logger LOGGER = LoggerFactory.getLogger(JDTCompilerProblemSolver.class);
-    private static final int MAX_ITERATIONS = 2;
+    private static final int MAX_ITERATIONS = 5;
     private static final int ERROR_LIMIT = 50;
     public static final int METHOD_UNDEFINED = 67108964;
     public static final int MUST_OVERRIDE_OR_IMPLEMENT_SUPERTYPE_METHOD = 67109498;
@@ -68,13 +69,7 @@ public class JDTCompilerProblemSolver {
                 handleCompilationErrors(originalProject, migratedProject, iterations, tracker, modelBuilder, results);
             } else {
                 LOGGER.info("Compilation finished with zero errors");
-                results.add(new CompilationResult(
-                        iterations,
-                        0,
-                        modelBuilder.getProblems().stream().filter(CategorizedProblem::isWarning).count(),
-                        modelBuilder.getProblems().stream().filter(CategorizedProblem::isInfo).count(),
-                        getCompilerErrors(modelBuilder.getProblems())
-                ));
+                results.add(createCompilationResult(iterations, modelBuilder));
             }
         } catch (ModelBuildingException ignored) {
             handleCompilationErrors(originalProject, migratedProject, iterations, tracker, modelBuilder, results);
@@ -83,18 +78,22 @@ public class JDTCompilerProblemSolver {
         return results;
     }
 
+    public static CompilationResult createCompilationResult(int iterations, JDTBasedSpoonCompiler modelBuilder) {
+        return new CompilationResult(iterations,
+                modelBuilder.getProblems().stream().filter(CategorizedProblem::isError).count(),
+                modelBuilder.getProblems().stream().filter(CategorizedProblem::isWarning).count(),
+                modelBuilder.getProblems().stream().filter(CategorizedProblem::isInfo).count(),
+                getCompilerErrors(modelBuilder.getProblems()));
+    }
+
     private static List<CompilationResult.CompilerError> getCompilerErrors(List<CategorizedProblem> problems) {
-        return problems.stream().map(problem -> new CompilationResult.CompilerError(problem.getID(), problem.getMessage())).collect(Collectors.toList());
+        return problems.stream().filter(CategorizedProblem::isError).map(problem -> new CompilationResult.CompilerError(problem.getID(), problem.getMessage())).collect(Collectors.toList());
     }
 
     private static void handleCompilationErrors(Project originalProject, Project migratedProject, int iterations,
                                                 ElementTransformationTracker tracker, JDTBasedSpoonCompiler modelBuilder,
                                                 List<CompilationResult> results) {
-        results.add(new CompilationResult(iterations,
-                modelBuilder.getProblems().stream().filter(CategorizedProblem::isError).count(),
-                modelBuilder.getProblems().stream().filter(CategorizedProblem::isWarning).count(),
-                modelBuilder.getProblems().stream().filter(CategorizedProblem::isInfo).count(),
-                getCompilerErrors(modelBuilder.getProblems())));
+        results.add(createCompilationResult(iterations, modelBuilder));
         List<CategorizedProblem> problems = modelBuilder.getProblems().stream().filter(CategorizedProblem::isError).toList();
         LOGGER.info("Number of compiler errors: {}", problems.size());
         LOGGER.info("=============================");

@@ -80,7 +80,7 @@ public class LocalFileStorageService implements StorageService<String> {
             outputStream.write(content.getBytes());
             LOGGER.debug("Successfully written to '{}'", fileLocation);
         } catch (IOException e) {
-            LOGGER.warn("Could not write the content to the file '{}'. Reason: {}", fileLocation, e.getMessage());
+            LOGGER.error("Could not write the content to the file '{}'. Reason: {}", fileLocation, e.getMessage());
         }
     }
 
@@ -92,7 +92,7 @@ public class LocalFileStorageService implements StorageService<String> {
             } else if (file.getParentFile().mkdirs()) {
                 tryCreateFile(file);
             } else {
-                LOGGER.warn("Could not successfully create the directory for the file at location {}", file);
+                LOGGER.error("Could not successfully create the directory for the file at location {}", file);
             }
         }
     }
@@ -103,7 +103,7 @@ public class LocalFileStorageService implements StorageService<String> {
                 LOGGER.debug("File created at location '{}'", fileLocation);
             }
         } catch (IOException e) {
-            LOGGER.warn("Could not create file at location '{}'", fileLocation);
+            LOGGER.error("Could not create file at location '{}'", fileLocation);
         }
     }
 
