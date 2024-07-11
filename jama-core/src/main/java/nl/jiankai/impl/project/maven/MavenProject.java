@@ -106,6 +106,14 @@ public class MavenProject implements Project {
 
     @Override
     public boolean hasDependency(Dependency dependency) {
+        if (dependency.version() == null) {
+            return resolve()
+                    .stream()
+                    .anyMatch(resolvedDependency ->
+                            Objects.equals(resolvedDependency.groupId(), dependency.groupId()) &&
+                                    Objects.equals(resolvedDependency.artifactId(), dependency.artifactId())
+                    );
+        }
         return resolve().contains(dependency);
     }
 

@@ -20,6 +20,9 @@ import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import spoon.Launcher;
+import spoon.reflect.CtModel;
+import spoon.reflect.reference.CtReference;
+import spoon.reflect.visitor.filter.AbstractFilter;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,7 +39,7 @@ import static nl.jiankai.spoon.SpoonUtil.getLauncher;
 
 public class Jama {
     private static final Logger LOGGER = LoggerFactory.getLogger(Jama.class);
-    public static final Path BASE_PATH = Paths.get("").toAbsolutePath();
+    public static final Path BASE_PATH = Paths.get("/home/jiankai/test").toAbsolutePath();
 
     //TODO fix generic type is erased and replace with an actual type
     public static void main(String[] args) throws IOException {
@@ -51,7 +54,8 @@ public class Jama {
         String endCommitId = inputParams[2];
         String oldVersion = inputParams[3];
         String newVersion = inputParams[4];
-        LOGGER.info("Starting pipeline with the following parameters: dependencyUrl: {}, startCommitId {}, endCommitId {}, oldVersion: {}, newVersion: {}", dependencyProjectUrl, startCommitId, endCommitId, oldVersion, newVersion);
+        String signature = inputParams[5];
+        LOGGER.info("Starting pipeline with the following parameters: dependencyUrl: {}, startCommitId {}, endCommitId {}, oldVersion: {}, newVersion: {}, signature: {}", dependencyProjectUrl, startCommitId, endCommitId, oldVersion, newVersion, signature);
         GitRepository dependencyProject = new JGitRepositoryFactory().createProject(dependencyProjectUrl, new File(outputDirectory, "dependency"));
         dependencyProject.checkout(endCommitId);
         Collection<Refactoring> refactorings = getRefactorings(dependencyProject, startCommitId, endCommitId);
@@ -60,7 +64,7 @@ public class Jama {
         Launcher dependencyLauncher = getLauncher(dependencyProject);
         dependencyLauncher.buildModel();
         LOGGER.info("{} build sucessfully", dependencyProject.getId());
-        runPipeline("deps.json", outputDirectory, dependencyProject, migrations, dependencyLauncher, oldVersion, newVersion);
+        runPipeline("deps.json", outputDirectory, dependencyProject, migrations, dependencyLauncher, oldVersion, newVersion, signature);
     }
 
     private static void jodatime() {
@@ -79,10 +83,40 @@ public class Jama {
         migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "2.12.7");
     }
 
-    private static void commonsCollection() {
+    private static void commonsIO(String project) {
+        File outputDirectory = BASE_PATH.toFile();
+        String startCommitId = "a73895f";
+        String endCommitId = "828650e";
+        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-io"));
+        dependencyProject.checkout(endCommitId);
+        Collection<Refactoring> refactorings = getRefactorings(dependencyProject, startCommitId, endCommitId);
+        Collection<Migration> migrations = getMigrationPaths(refactorings);
+        LOGGER.info("Found {} migration paths", migrations.size());
+        Launcher dependencyLauncher = getLauncher(dependencyProject);
+        dependencyLauncher.buildModel();
+        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/" + project));
+        migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "2.16.1"); //collections
+    }
+
+    private static void commonsLang(String project) {
+        File outputDirectory = BASE_PATH.toFile();
+        String startCommitId = "e0b474c";
+        String endCommitId = "144b86a";
+        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-lang"));
+        dependencyProject.checkout(endCommitId);
+        Collection<Refactoring> refactorings = getRefactorings(dependencyProject, startCommitId, endCommitId);
+        Collection<Migration> migrations = getMigrationPaths(refactorings);
+        LOGGER.info("Found {} migration paths", migrations.size());
+        Launcher dependencyLauncher = getLauncher(dependencyProject);
+        dependencyLauncher.buildModel();
+        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/" + project));
+        migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "3.10.0"); //collections
+    }
+
+    private static void commonsCollection(String project) {
         File outputDirectory = BASE_PATH.toFile();
         String startCommitId = "db18992";
-        String endCommitId = "6b7cf3f6";
+        String endCommitId = "ceb03e0a";
         GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-collections"));
         dependencyProject.checkout(endCommitId);
         Collection<Refactoring> refactorings = getRefactorings(dependencyProject, startCommitId, endCommitId);
@@ -90,11 +124,11 @@ public class Jama {
         LOGGER.info("Found {} migration paths", migrations.size());
         Launcher dependencyLauncher = getLauncher(dependencyProject);
         dependencyLauncher.buildModel();
-        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/opencsv-source"));
-        migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "4.5.0-SNAPSHOT"); //collections
+        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/" + project));
+        migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "4.5.0-M2"); //collections
     }
 
-    private static void commonsText() {
+    private static void commonsText(String project) {
         File outputDirectory = BASE_PATH.toFile();
         String startCommitId = "82aecf36";
         String endCommitId = "bcd37271";
@@ -106,8 +140,8 @@ public class Jama {
         Launcher dependencyLauncher = getLauncher(dependencyProject);
         dependencyLauncher.buildModel();
         LOGGER.info("{} build sucessfully", dependencyProject.getId());
-        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/plugin-test-repo-2"));
-        migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "1.11.1-SNAPSHOT"); //commons-text
+        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/" + project));
+        migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "1.11.0"); //commons-text
     }
 
     private static Collection<Migration> getMigrationPaths(Collection<Refactoring> refactorings) {
@@ -137,7 +171,7 @@ public class Jama {
         return refactorings;
     }
 
-    private static void runPipeline(String repoFile, File outputDirectory, GitRepository dependencyProject, Collection<Migration> migrations, Launcher dependencyLauncher, String oldVersion, String newVersion) throws IOException {
+    private static void runPipeline(String repoFile, File outputDirectory, GitRepository dependencyProject, Collection<Migration> migrations, Launcher dependencyLauncher, String oldVersion, String newVersion, String signature) throws IOException {
         JGitRepositoryFactory projectFactory = new JGitRepositoryFactory();
         LocalFileStorageService analysedDependents = new LocalFileStorageService(BASE_PATH + "/analyzed.txt", true);
         LocalFileStorageService eligibleDependents = new LocalFileStorageService(BASE_PATH + "/eligible.txt", true);
@@ -151,7 +185,7 @@ public class Jama {
                 .filter(shouldSkip(alreadyAnalysedDependents))
                 .map(createRepository(outputDirectory, analysedDependents, projectFactory))
                 .filter(Objects::nonNull)
-                .filter(isEligibleForAnalysis(dependencyProject, oldVersion))
+                .filter(isEligibleForAnalysis(dependencyProject, oldVersion, signature))
                 .forEach(migrate(outputDirectory, dependencyProject, migrations, dependencyLauncher, newVersion, eligibleDependents));
     }
 
@@ -166,9 +200,9 @@ public class Jama {
         };
     }
 
-    private static Predicate<GitRepository> isEligibleForAnalysis(GitRepository dependencyProject, String oldVersion) {
+    private static Predicate<GitRepository> isEligibleForAnalysis(GitRepository dependencyProject, String oldVersion, String signature) {
         return repo -> {
-            if (isEligible(repo, dependencyProject, oldVersion)) {
+            if (isEligible(repo, dependencyProject, oldVersion, signature)) {
                 LOGGER.info("Repository '{}' is eligible", repo.getId());
                 return true;
             } else {
@@ -209,7 +243,7 @@ public class Jama {
         };
     }
 
-    private static boolean isEligible(Project repo, Project dependencyProject, String oldVersion) {
+    private static boolean isEligible(Project repo, Project dependencyProject, String oldVersion, String signature) {
         try {
             Collection<File> sourceDirectories = repo.getSourceDirectories();
 
@@ -220,7 +254,6 @@ public class Jama {
 
             File sourceDirectory = sourceDirectories.iterator().next();
 
-
             final boolean srcDirectoryInRoot = sourceDirectory.getParentFile().equals(repo.getLocalPath());
 
             if (!srcDirectoryInRoot) {
@@ -229,15 +262,58 @@ public class Jama {
             }
 
             try {
-                return repo.isOlderDependency(createDependency(dependencyProject.getProjectVersion(), oldVersion));
+                if (repo.hasDependency(new Dependency("org.projectlombok", "lombok", null))) {
+                    LOGGER.info("Project '{}' is using Lombok", repo.getId());
+                    return false;
+                }
             } catch (Exception e) {
-                LOGGER.error("Something went wrong while checking dependency version for project '{}': {}", repo.getId(), e.getMessage());
-                return true; //if dependency version can not be checked then assume it's okay because resolving maven pom file is unstable
+                LOGGER.error("Something went wrong while checking whether project '{}' is using Lombok: {}", repo.getId(), e.getMessage());
             }
+
+//            try {
+//                 if (!repo.isOlderDependency(createDependency(dependencyProject.getProjectVersion(), oldVersion))) {
+//                     LOGGER.warn("Project '{}' is using older dependency", repo.getId());
+//                     return false;
+//                 }
+//            } catch (Exception e) {
+//                LOGGER.error("Something went wrong while checking dependency version for project '{}': {}", repo.getId(), e.getMessage());
+//            }
+
+            try {
+                 if (!usesSignature(repo, signature)) {
+                     LOGGER.warn("Project '{}' does not use signature '{}'", repo.getId(), signature);
+                     return false;
+                 } else {
+                     LOGGER.info("Project '{}' uses signature '{}'", repo.getId(), signature);
+                    return true;
+                 }
+            } catch (Exception e) {
+                LOGGER.error("Something went wrong while checking for signature for project '{}': {}", repo.getId(), e.getMessage());
+            }
+
+            return true; //if all fails just assume it's ok
         } catch (Exception e) {
             LOGGER.error("Something went wrong while determining eligibility of project {}: {}", repo.getId(), e.getMessage());
             return false;
         }
+    }
+
+    private static boolean usesSignature(Project repo, String signature) {
+        Launcher launcher = getLauncher(repo);
+        launcher.buildModel();
+
+        // Get the model
+        CtModel model = launcher.getModel();
+
+        // Define a filter to find references containing "commons.text"
+        AbstractFilter<CtReference> filter = new AbstractFilter<>(CtReference.class) {
+            @Override
+            public boolean matches(CtReference reference) {
+                return reference.toString().contains(signature);
+            }
+        };
+
+        return !model.getElements(filter).isEmpty();
     }
 
     private static void deleteRepo(File repoDirectory) {
