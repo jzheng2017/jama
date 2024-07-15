@@ -13,6 +13,7 @@ import nl.jiankai.spoon.transformations.clazz.ImplementMethodTransformation;
 import nl.jiankai.spoon.transformations.clazz.RemoveMethodTransformation;
 import nl.jiankai.spoon.transformations.clazz.RemoveParentClassTransformation;
 import nl.jiankai.spoon.transformations.method.RemoveMethodCallTransformation;
+import nl.jiankai.spoon.transformations.method.ReplaceMethodCallArgumentTransformation;
 import nl.jiankai.util.FileUtil;
 import org.apache.commons.io.FileUtils;
 import org.eclipse.jdt.core.compiler.CategorizedProblem;
@@ -34,6 +35,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static nl.jiankai.spoon.SpoonUtil.getLauncher;
+import static nl.jiankai.util.TypeUtil.getDefaultValue;
 
 public class JDTCompilerProblemSolver {
     private static final Logger LOGGER = LoggerFactory.getLogger(JDTCompilerProblemSolver.class);
@@ -47,6 +49,8 @@ public class JDTCompilerProblemSolver {
     public static final int UNHANDLED_EXCEPTION = 16777384;
 
     public static List<CompilationResult> compile(Project migratedProject, Project originalProject, ElementTransformationTracker tracker) {
+        FileUtils.deleteQuietly(new File(migratedProject.getLocalPath(), "spoon.classpath.tmp"));
+        FileUtils.deleteQuietly(new File(migratedProject.getLocalPath(), "spoon.classpath-app.tmp"));
         List<CompilationResult> result = compile(migratedProject, originalProject, 1, tracker, new ArrayList<>());
         tracker.report();
         return result;
@@ -58,7 +62,6 @@ public class JDTCompilerProblemSolver {
         if (iterations > MAX_ITERATIONS) {
             return results;
         }
-
 
         LOGGER.info("Compilation iteration {}", iterations);
         Launcher launcher = getLauncher(migratedProject);
@@ -144,6 +147,9 @@ public class JDTCompilerProblemSolver {
         } else if (categorizedProblem.getID() == CANNOT_BE_RESOLVED_TO_A_TYPE) {
             String className = FileUtil.javaFileNameToFullyQualifiedClass(new String(categorizedProblem.getOriginatingFileName()));
             classTransformationProvider.add(className, new RemoveParentClassTransformation(className, args.getLast(), tracker));
+        } else if (categorizedProblem.getID() == METHOD_ARGUMENTS_PROVIDED_NOT_APPLICABLE) {
+            String qualifiedSignature = "%s(%s)".formatted(args.get(1), unqualify(args.getLast()));
+            System.out.println();
         }
     }
 

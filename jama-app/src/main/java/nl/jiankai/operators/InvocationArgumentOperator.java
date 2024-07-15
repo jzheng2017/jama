@@ -50,13 +50,24 @@ public class InvocationArgumentOperator implements MigrationOperator {
 
     private void updateArgumentTypes(List<Variable> after, Map<String, String> changedVariables, String originalSignature) {
         List<String> afterNames = after.stream().map(Variable::name).toList();
-        changedVariables = changedVariables.entrySet().stream().filter(entry -> !isBoxed(entry.getKey(), entry.getValue())).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        changedVariables = changedVariables.entrySet().stream().filter(entry -> !compatibleType(entry.getKey(), entry.getValue())).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         for (Map.Entry<String, String> variable : changedVariables.entrySet()) {
             int index = afterNames.indexOf(variable.getValue());
             if (index >= 0) {
-                transformationProvider.add(originalSignature, new ReplaceMethodCallArgumentTransformation<>(tracker, originalSignature, index, getDefaultValue(after.get(index).type())));
+                Object defaultValue = getDefaultValue(after.get(index).type());
+                if (defaultValue != null) {
+                    transformationProvider.add(originalSignature, new ReplaceMethodCallArgumentTransformation<>(tracker, originalSignature, index, defaultValue));
+                }
             }
         }
+    }
+
+    private boolean compatibleType(String originalType, String newType) {
+        return isBoxed(originalType, newType) || isCompatible(originalType, newType);
+    }
+
+    private boolean isCompatible(String originalType, String newType) {
+        return (originalType.equals("int") && (newType.equalsIgnoreCase("long"))) || (originalType.equals("double") && (newType.equalsIgnoreCase("float")));
     }
 
     private boolean isBoxed(String originalType, String newType) {

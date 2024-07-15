@@ -60,95 +60,102 @@ public class Migrator {
 
     public Statistics migrate(Project toMigrateProject, Project dependencyProject, Collection<Migration> migrations, Launcher dependencyLauncher, String newVersion) {
         long start = System.currentTimeMillis();
-        setup(toMigrateProject, dependencyProject);
-
-        Transformer<Processor<?>> transformer = new SpoonTransformer(toMigrateProject, outputDirectory);
-
-        var tracker = new ElementTransformationTracker();
-
-        collectClassMappings(migrations, tracker);
-        var methodCallTransformationProvider = new SpoonTransformationProvider<CtInvocation>();
-        var fieldAccessTransformationProvider = new SpoonTransformationProvider<CtFieldAccess>();
-        var classTransformationProvider = new SpoonTransformationProvider<CtClass>();
-        var referenceTransformationProvider = new SpoonTransformationProvider<CtTypeReference>();
-        var methodCallTransformer = new SpoonMethodCallTransformer(methodCallTransformationProvider, tracker);
-        var statementTransformer = new FieldAccessTransformer(fieldAccessTransformationProvider);
-        var classTransformer = new SpoonClassTransformer(classTransformationProvider);
-        var referenceTransformer = new SpoonReferenceTransformer(referenceTransformationProvider);
-
-        migrations.forEach(migration -> migrate(migration, methodCallTransformationProvider, fieldAccessTransformationProvider, referenceTransformationProvider, tracker, dependencyLauncher.getFactory()));
-        transformer.addProcessor(methodCallTransformer.handle());
-        transformer.addProcessor(statementTransformer.handle());
-        transformer.addProcessor(classTransformer.handle());
-        transformer.addProcessor(referenceTransformer.handle()); //it's important that class references are migrated last as otherwise other code elements that reference these class references can not be matched anymore
-        String failureReason = "";
-        Set<String> untestedClasses = Set.of();
-        Project migratedProject = new CompositeProjectFactory().createProject(outputDirectory);
-        boolean lowCoverage = false;
-        CompilationResult resultBeforeTransformation = compileAndGetCompilationResult(migratedProject);
-        CompilationResult resultAfterTransformation;
         try {
-            transformer.run();
-            resultAfterTransformation = compileAndGetCompilationResult(migratedProject);
-            tracker.report();
-            upgradeMigratedProject(dependencyProject, newVersion, migratedProject);
-            untestedClasses = determineTestCoverage(tracker, migratedProject);
-        } catch (ModelBuildingException e) {
-            LOGGER.warn("The project has errors which is possible at this stage and an attempt will be done to fix it", e);
-            failureReason = e.toString();
-            resultAfterTransformation = compileAndGetCompilationResult(migratedProject);
-            return failureStatistics(toMigrateProject, tracker, untestedClasses,"", failureReason, start, resultBeforeTransformation, resultAfterTransformation);
-        } catch (LowTestCoverageException e) {
-            failureReason = e.toString();
-            lowCoverage = true;
-            resultAfterTransformation = compileAndGetCompilationResult(migratedProject);
-        } catch (Exception e) {
-            failureReason = e.toString();
-            resultAfterTransformation = compileAndGetCompilationResult(migratedProject);
-            return failureStatistics(toMigrateProject, tracker, untestedClasses,"", failureReason, start, resultBeforeTransformation, resultAfterTransformation);
-        }
+            setup(toMigrateProject, dependencyProject);
 
-        List<CompilationResult> compilationResults;
-        TestReport testReport;
+            Transformer<Processor<?>> transformer = new SpoonTransformer(toMigrateProject, outputDirectory);
 
-        try {
-            compilationResults = compile(migratedProject, toMigrateProject, tracker);
-        } catch (Exception e) {
-            failureReason = e.toString();
-            return failureStatistics(toMigrateProject, tracker, untestedClasses,"",failureReason, start, resultBeforeTransformation, resultAfterTransformation);
-        }
+            var tracker = new ElementTransformationTracker();
 
-        if (lowCoverage) {
-            return failureStatistics(toMigrateProject, tracker, untestedClasses,"No tests were ran as there were too few tests",failureReason, start, resultBeforeTransformation, resultAfterTransformation);
-        } else {
+            collectClassMappings(migrations, tracker);
+            var methodCallTransformationProvider = new SpoonTransformationProvider<CtInvocation>();
+            var fieldAccessTransformationProvider = new SpoonTransformationProvider<CtFieldAccess>();
+            var classTransformationProvider = new SpoonTransformationProvider<CtClass>();
+            var referenceTransformationProvider = new SpoonTransformationProvider<CtTypeReference>();
+            var methodCallTransformer = new SpoonMethodCallTransformer(methodCallTransformationProvider, tracker);
+            var statementTransformer = new FieldAccessTransformer(fieldAccessTransformationProvider);
+            var classTransformer = new SpoonClassTransformer(classTransformationProvider);
+            var referenceTransformer = new SpoonReferenceTransformer(referenceTransformationProvider);
+
+            migrations.forEach(migration -> migrate(migration, methodCallTransformationProvider, fieldAccessTransformationProvider, referenceTransformationProvider, tracker, dependencyLauncher.getFactory()));
+            transformer.addProcessor(methodCallTransformer.handle());
+            transformer.addProcessor(statementTransformer.handle());
+            transformer.addProcessor(classTransformer.handle());
+            transformer.addProcessor(referenceTransformer.handle()); //it's important that class references are migrated last as otherwise other code elements that reference these class references can not be matched anymore
+            String failureReason = "";
+            Set<String> untestedClasses = Set.of();
+            Project migratedProject = new CompositeProjectFactory().createProject(outputDirectory);
+            boolean lowCoverage = false;
+            CompilationResult resultBeforeTransformation = compileAndGetCompilationResult(migratedProject);
+            CompilationResult resultAfterTransformation;
             try {
-                testReport = testAffectedClasses(tracker, migratedProject);
+                transformer.run();
+                resultAfterTransformation = compileAndGetCompilationResult(migratedProject);
+                tracker.report();
+                upgradeMigratedProject(dependencyProject, newVersion, migratedProject);
+                untestedClasses = determineTestCoverage(tracker, migratedProject);
+            } catch (ModelBuildingException e) {
+                LOGGER.warn("The project has errors which is possible at this stage and an attempt will be done to fix it", e);
+                failureReason = e.toString();
+                resultAfterTransformation = compileAndGetCompilationResult(migratedProject);
+                return failureStatistics(toMigrateProject, tracker, untestedClasses, "", failureReason, start, resultBeforeTransformation, resultAfterTransformation);
+            } catch (LowTestCoverageException e) {
+                failureReason = e.toString();
+                lowCoverage = true;
+                resultAfterTransformation = compileAndGetCompilationResult(migratedProject);
             } catch (Exception e) {
-                return failureStatistics(toMigrateProject, tracker, untestedClasses, e.toString(), e.toString(), start, resultBeforeTransformation, resultAfterTransformation);
+                failureReason = e.toString();
+                resultAfterTransformation = compileAndGetCompilationResult(migratedProject);
+                return failureStatistics(toMigrateProject, tracker, untestedClasses, "", failureReason, start, resultBeforeTransformation, resultAfterTransformation);
             }
 
+            List<CompilationResult> compilationResults;
+            TestReport testReport;
 
+            try {
+                compilationResults = compile(migratedProject, toMigrateProject, tracker);
+            } catch (Exception e) {
+                failureReason = e.toString();
+                return failureStatistics(toMigrateProject, tracker, untestedClasses, "", failureReason, start, resultBeforeTransformation, resultAfterTransformation);
+            }
+
+            if (lowCoverage) {
+                return failureStatistics(toMigrateProject, tracker, untestedClasses, "No tests were ran as there were too few tests", failureReason, start, resultBeforeTransformation, resultAfterTransformation);
+            } else {
+                try {
+                    testReport = testAffectedClasses(tracker, migratedProject);
+                } catch (Exception e) {
+                    return failureStatistics(toMigrateProject, tracker, untestedClasses, e.toString(), e.toString(), start, resultBeforeTransformation, resultAfterTransformation);
+                }
+
+                long end = System.currentTimeMillis();
+                return new Statistics(
+                        migratedProject.getProjectVersion().toString(),
+                        tracker.affectedClasses().size(),
+                        tracker.changes(),
+                        tracker.affectedClasses(),
+                        untestedClasses,
+                        tracker.elementChanges().entrySet().stream().map(event -> new Statistics.TransformationCount(event.getKey().transformation(), event.getKey().element(), event.getValue())).toList(),
+                        resultBeforeTransformation,
+                        resultAfterTransformation,
+                        compilationResults,
+                        testReport,
+                        failureReason,
+                        end - start
+                );
+            }
+        } finally {
             long end = System.currentTimeMillis();
             LOGGER.info("It took {} seconds to migrate {}", (end - start) / 1000, toMigrateProject.getId());
-            return new Statistics(
-                    migratedProject.getProjectVersion().toString(),
-                    tracker.affectedClasses().size(), tracker.changes(),
-                    tracker.affectedClasses(),
-                    untestedClasses,
-                    tracker.elementChanges().entrySet().stream().map(event -> new Statistics.TransformationCount(event.getKey().transformation(), event.getKey().element(), event.getValue())).toList(),
-                    resultBeforeTransformation,
-                    resultAfterTransformation,
-                    compilationResults,
-                    testReport,
-                    failureReason,
-                    end - start
-            );
         }
     }
 
     private static void upgradeMigratedProject(Project dependencyProject, String newVersion, Project migratedProject) {
         ProjectCoordinate coord = dependencyProject.getProjectVersion().coordinate();
         migratedProject.upgradeDependency(new Dependency(coord.groupId(), coord.artifactId(), newVersion));
+//        migratedProject.upgradeDependency(new Dependency("jakarta.servlet", "jakarta.servlet-api", newVersion));
+        migratedProject.upgradeDependency(new Dependency("commons-collections", "commons-collections", newVersion));
+//        migratedProject.upgradeDependency(new Dependency("commons-lang", "commons-lang", newVersion));
         migratedProject.install();
     }
 
@@ -180,6 +187,8 @@ public class Migrator {
     }
 
     private CompilationResult compileAndGetCompilationResult(Project project) {
+        FileUtils.deleteQuietly(new File(project.getLocalPath(), "spoon.classpath.tmp"));
+        FileUtils.deleteQuietly(new File(project.getLocalPath(), "spoon.classpath-app.tmp"));
         Launcher launcher = getLauncher(project);
         JDTBasedSpoonCompiler modelBuilder = (JDTBasedSpoonCompiler) launcher.getModelBuilder();
         try {

@@ -93,14 +93,22 @@ public class SpoonUtil {
     }
 
     private static List<String> getArgumentTypes(CtMethod<?> method) {
-        return method.getParameters().stream().map(c -> c.getReference().getType().getSimpleName()).toList();
+        return method.getParameters().stream().map(c -> removeGenerics(c.getReference().getType().getSimpleName())).toList();
     }
 
     private static List<String> getArgumentTypes(CtInvocation<?> methodCall) {
-        return methodCall.getExecutable().getParameters().stream().map(CtTypeReference::getSimpleName).toList();
+        return methodCall.getExecutable().getParameters().stream().map(CtTypeReference::getSimpleName).map(SpoonUtil::removeGenerics).toList();
     }
 
     private static String getClass(CtMethod<?> method) {
         return method.getDeclaringType().getReference().getQualifiedName();
+    }
+
+    private static String removeGenerics(String type) {
+        if (type.contains("<")) {
+            return type.substring(0, type.indexOf("<"));
+        }
+
+        return type;
     }
 }

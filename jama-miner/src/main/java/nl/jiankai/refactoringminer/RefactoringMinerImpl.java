@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 
 public class RefactoringMinerImpl implements RefactoringMiner {
     private static final Logger LOGGER = LoggerFactory.getLogger(RefactoringMinerImpl.class);
+
     public RefactoringMinerImpl() {
     }
 
@@ -55,7 +56,7 @@ public class RefactoringMinerImpl implements RefactoringMiner {
                     if (r instanceof ReorderParameterRefactoring ropr) {
                         return Map.of(
                                 "before", ropr.getParametersBefore().stream().map(v -> Map.of("type", v.getType().toString(), "name", v.getVariableName())).toList(),
-                                "after", ropr.getParametersAfter().stream().map(v ->  Map.of("type", v.getType().toString(), "name", v.getVariableName())).toList()
+                                "after", ropr.getParametersAfter().stream().map(v -> Map.of("type", v.getType().toString(), "name", v.getVariableName())).toList()
                         );
                     } else if (r instanceof AddParameterRefactoring apr) {
                         return Map.of(
@@ -113,7 +114,7 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             return rpr.getOperationBefore().getVisibility() == Visibility.PUBLIC;
         } else if (r instanceof ChangeVariableTypeRefactoring cvtr && cvtr.getOperationBefore() instanceof UMLOperation ob) { // constructor or method
             return ob.getVisibility() == Visibility.PUBLIC;
-        }else if (r instanceof ChangeVariableTypeRefactoring cvtr) { // class fields
+        } else if (r instanceof ChangeVariableTypeRefactoring cvtr) { // class fields
             return cvtr.getOriginalVariable().getModifiers().stream().anyMatch(modifier -> modifier.getKeyword().equals("public"));
         } else if (r instanceof RenameOperationRefactoring ror) {
             return ror.getOriginalOperation().getVisibility() == Visibility.PUBLIC;
@@ -168,7 +169,22 @@ public class RefactoringMinerImpl implements RefactoringMiner {
     }
 
     private String getParametersUMLOperation(UMLOperation umlOperation) {
-        return umlOperation.getParameters().stream().filter(m -> "in".equals(m.getKind())).map(UMLParameter::getType).map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+        return umlOperation
+                .getParameters()
+                .stream()
+                .filter(m -> "in".equals(m.getKind()))
+                .map(UMLParameter::getType)
+                .map(UMLType::toQualifiedString)
+                .map(this::removeGenerics)
+                .collect(Collectors.joining(", "));
+    }
+
+    private String removeGenerics(String type) {
+        if (type.contains("<")) {
+            return type.substring(0, type.indexOf("<"));
+        }
+
+        return type;
     }
 
     private String getBeforeParameters(org.refactoringminer.api.Refactoring refactoring) {
@@ -180,17 +196,17 @@ public class RefactoringMinerImpl implements RefactoringMiner {
         } else if (refactoring instanceof RemoveParameterRefactoring rpr) {
             parameters += getParametersUMLOperation(rpr.getOperationBefore());
         } else if (refactoring instanceof ChangeVariableTypeRefactoring cvtr) {
-            parameters += cvtr.getOperationBefore().getParameterTypeList().stream().map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+            parameters += cvtr.getOperationBefore().getParameterTypeList().stream().map(UMLType::toQualifiedString).map(this::removeGenerics).collect(Collectors.joining(", "));
         } else if (refactoring instanceof RenameOperationRefactoring ror) {
             parameters += getParametersUMLOperation(ror.getOriginalOperation());
         } else if (refactoring instanceof ReorderParameterRefactoring ropr) {
-            parameters += ropr.getParametersBefore().stream().map(VariableDeclaration::getType).map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+            parameters += ropr.getParametersBefore().stream().map(VariableDeclaration::getType).map(UMLType::toQualifiedString).map(this::removeGenerics).collect(Collectors.joining(", "));
         } else if (refactoring instanceof RenameVariableRefactoring rvr) {
-            parameters += rvr.getOperationBefore().getParameterTypeList().stream().map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+            parameters += rvr.getOperationBefore().getParameterTypeList().stream().map(UMLType::toQualifiedString).map(this::removeGenerics).collect(Collectors.joining(", "));
         } else if (refactoring instanceof AddThrownExceptionTypeRefactoring atet) {
-            parameters += atet.getOperationBefore().getParameterTypeList().stream().map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+            parameters += atet.getOperationBefore().getParameterTypeList().stream().map(UMLType::toQualifiedString).map(this::removeGenerics).collect(Collectors.joining(", "));
         } else if (refactoring instanceof MoveOperationRefactoring mor) {
-            parameters += mor.getOriginalOperation().getParameterTypeList().stream().map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+            parameters += mor.getOriginalOperation().getParameterTypeList().stream().map(UMLType::toQualifiedString).map(this::removeGenerics).collect(Collectors.joining(", "));
         }
 
         return parameters + ")";
@@ -210,23 +226,23 @@ public class RefactoringMinerImpl implements RefactoringMiner {
     private String getAfterParameters(org.refactoringminer.api.Refactoring refactoring) {
         String parameters = "(";
         if (refactoring instanceof ChangeReturnTypeRefactoring crtr) {
-            parameters += crtr.getOperationAfter().getParameters().stream().filter(m -> "in".equals(m.getKind())).map(UMLParameter::getType).map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+            parameters += crtr.getOperationAfter().getParameters().stream().filter(m -> "in".equals(m.getKind())).map(UMLParameter::getType).map(UMLType::toQualifiedString).map(this::removeGenerics).collect(Collectors.joining(", "));
         } else if (refactoring instanceof AddParameterRefactoring apr) {
-            parameters += apr.getOperationAfter().getParameters().stream().filter(m -> "in".equals(m.getKind())).map(UMLParameter::getType).map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+            parameters += apr.getOperationAfter().getParameters().stream().filter(m -> "in".equals(m.getKind())).map(UMLParameter::getType).map(UMLType::toQualifiedString).map(this::removeGenerics).collect(Collectors.joining(", "));
         } else if (refactoring instanceof RemoveParameterRefactoring rpr) {
-            parameters += rpr.getOperationAfter().getParameters().stream().filter(m -> "in".equals(m.getKind())).map(UMLParameter::getType).map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+            parameters += rpr.getOperationAfter().getParameters().stream().filter(m -> "in".equals(m.getKind())).map(UMLParameter::getType).map(UMLType::toQualifiedString).map(this::removeGenerics).collect(Collectors.joining(", "));
         } else if (refactoring instanceof ChangeVariableTypeRefactoring cvtr) {
-            parameters += cvtr.getOperationAfter().getParameterTypeList().stream().map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+            parameters += cvtr.getOperationAfter().getParameterTypeList().stream().map(UMLType::toQualifiedString).map(this::removeGenerics).collect(Collectors.joining(", "));
         } else if (refactoring instanceof RenameOperationRefactoring ror) {
-            parameters += ror.getRenamedOperation().getParameters().stream().filter(m -> "in".equals(m.getKind())).map(UMLParameter::getType).map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+            parameters += ror.getRenamedOperation().getParameters().stream().filter(m -> "in".equals(m.getKind())).map(UMLParameter::getType).map(UMLType::toQualifiedString).map(this::removeGenerics).collect(Collectors.joining(", "));
         } else if (refactoring instanceof ReorderParameterRefactoring ropr) {
-            parameters += ropr.getParametersAfter().stream().map(VariableDeclaration::getType).map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+            parameters += ropr.getParametersAfter().stream().map(VariableDeclaration::getType).map(UMLType::toQualifiedString).map(this::removeGenerics).collect(Collectors.joining(", "));
         } else if (refactoring instanceof RenameVariableRefactoring rvr) {
-            parameters += rvr.getOperationAfter().getParameterTypeList().stream().map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+            parameters += rvr.getOperationAfter().getParameterTypeList().stream().map(UMLType::toQualifiedString).map(this::removeGenerics).collect(Collectors.joining(", "));
         } else if (refactoring instanceof AddThrownExceptionTypeRefactoring atet) {
-            parameters += atet.getOperationAfter().getParameterTypeList().stream().map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+            parameters += atet.getOperationAfter().getParameterTypeList().stream().map(UMLType::toQualifiedString).map(this::removeGenerics).collect(Collectors.joining(", "));
         } else if (refactoring instanceof MoveOperationRefactoring mor) {
-            parameters += mor.getMovedOperation().getParameterTypeList().stream().map(UMLType::toQualifiedString).collect(Collectors.joining(", "));
+            parameters += mor.getMovedOperation().getParameterTypeList().stream().map(UMLType::toQualifiedString).map(this::removeGenerics).collect(Collectors.joining(", "));
         }
 
         return parameters + ")";
@@ -285,7 +301,7 @@ public class RefactoringMinerImpl implements RefactoringMiner {
             return mor.getOriginalOperation().getClassName();
         } else if (refactoring instanceof MoveClassRefactoring mcr) {
             return mcr.getOriginalClassName();
-        }else if (refactoring instanceof RenameClassRefactoring rcr) {
+        } else if (refactoring instanceof RenameClassRefactoring rcr) {
             return rcr.getOriginalClassName();
         }
 

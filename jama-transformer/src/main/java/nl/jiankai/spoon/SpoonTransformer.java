@@ -4,6 +4,7 @@ import com.google.common.io.Files;
 import nl.jiankai.api.project.Project;
 import nl.jiankai.api.Transformer;
 import nl.jiankai.util.FileUtil;
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import spoon.Launcher;
@@ -84,8 +85,12 @@ public class SpoonTransformer implements Transformer<Processor<?>> {
     private void moveFileToTestDirectory(File file) {
         File destination = new File(file.toString().replace("/src/main/java", "/src/test/java"));
         try {
-            destination.mkdirs();
-            Files.move(file, destination);
+            File directory = FileUtils.createParentDirectories(destination);
+            if (directory.exists()) {
+                Files.move(file, destination);
+            } else {
+                LOGGER.warn("Could not create directory: {}", directory.getAbsolutePath());
+            }
         } catch (IOException e) {
             LOGGER.warn("Could not move {} to {}. Reason: {}", file, destination, e.getMessage());
         }

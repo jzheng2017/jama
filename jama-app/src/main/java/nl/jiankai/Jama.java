@@ -39,13 +39,39 @@ import static nl.jiankai.spoon.SpoonUtil.getLauncher;
 
 public class Jama {
     private static final Logger LOGGER = LoggerFactory.getLogger(Jama.class);
+    private static int stars = 0;
     public static final Path BASE_PATH = Paths.get("/home/jiankai/test").toAbsolutePath();
 
     //TODO fix generic type is erased and replace with an actual type
     public static void main(String[] args) throws IOException {
-        pipeline();
+//        commonsLang("dqd");
+//        commonsLang("perl-on-netbeans");
+//        jakartaServlet("kb-util");
+        commonsCollection("seppb");
+//        commonsLang("jcabi-github");
+//        if (args.length == 1) {
+//            stars = Integer.parseInt(args[0]);
+//        } else {
+//            stars = 5;
+//        }
+//        LOGGER.info("Filtering projects on {} stars", stars);
+//        pipeline();
     }
-
+    private static void jakartaServlet(String project) {
+        File outputDirectory = BASE_PATH.toFile();
+        String startCommitId = "b4a9167";
+        String endCommitId = "c6985a21";
+        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/servlet"));
+//        dependencyProject.checkout(endCommitId);
+        Collection<Refactoring> refactorings = getRefactorings(dependencyProject, startCommitId, endCommitId);
+        Collection<Migration> migrations = getMigrationPaths(refactorings);
+        LOGGER.info("Found {} migration paths", migrations.size());
+        Launcher dependencyLauncher = getLauncher(dependencyProject);
+        dependencyLauncher.getEnvironment().setComplianceLevel(9);
+        dependencyLauncher.buildModel();
+        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/" + project));
+        migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "6.2.0-SNAPSHOT"); //lang
+    }
     private static void pipeline() throws IOException {
         File outputDirectory = BASE_PATH.toFile();
         String[] inputParams = FileUtils.readFileToString(new File(BASE_PATH.toFile(), "input.txt")).split(";");
@@ -98,10 +124,25 @@ public class Jama {
         migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "2.16.1"); //collections
     }
 
+    private static void commonsMath(String project) {
+        File outputDirectory = BASE_PATH.toFile();
+        String startCommitId = "618358ea";
+        String endCommitId = "775a84d8";
+        GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-math"));
+        dependencyProject.checkout(endCommitId);
+        Collection<Refactoring> refactorings = getRefactorings(dependencyProject, startCommitId, endCommitId);
+        Collection<Migration> migrations = getMigrationPaths(refactorings);
+        LOGGER.info("Found {} migration paths", migrations.size());
+        Launcher dependencyLauncher = getLauncher(dependencyProject);
+        dependencyLauncher.buildModel();
+        GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/" + project));
+        migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "3.7-SNAPSHOT"); //math
+    }
+
     private static void commonsLang(String project) {
         File outputDirectory = BASE_PATH.toFile();
-        String startCommitId = "e0b474c";
-        String endCommitId = "144b86a";
+        String startCommitId = "a33e37af";
+        String endCommitId = "144b86a7";
         GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-lang"));
         dependencyProject.checkout(endCommitId);
         Collection<Refactoring> refactorings = getRefactorings(dependencyProject, startCommitId, endCommitId);
@@ -110,22 +151,22 @@ public class Jama {
         Launcher dependencyLauncher = getLauncher(dependencyProject);
         dependencyLauncher.buildModel();
         GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/" + project));
-        migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "3.10.0"); //collections
+        migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "3.15.0-SNAPSHOT"); //lang
     }
 
     private static void commonsCollection(String project) {
         File outputDirectory = BASE_PATH.toFile();
-        String startCommitId = "db18992";
-        String endCommitId = "ceb03e0a";
+        String startCommitId = "1d0b9ab";
+        String endCommitId = "cab58b3";
         GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-collections"));
-        dependencyProject.checkout(endCommitId);
+//        dependencyProject.checkout(endCommitId);
         Collection<Refactoring> refactorings = getRefactorings(dependencyProject, startCommitId, endCommitId);
         Collection<Migration> migrations = getMigrationPaths(refactorings);
         LOGGER.info("Found {} migration paths", migrations.size());
         Launcher dependencyLauncher = getLauncher(dependencyProject);
         dependencyLauncher.buildModel();
         GitRepository migratedProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/" + project));
-        migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "4.5.0-M2"); //collections
+        migrate(migratedProject, dependencyProject, outputDirectory, migrations, dependencyLauncher, "4.4"); //collections
     }
 
     private static void commonsText(String project) {
@@ -133,7 +174,7 @@ public class Jama {
         String startCommitId = "82aecf36";
         String endCommitId = "bcd37271";
         GitRepository dependencyProject = new JGitRepositoryFactory().createProject(new File("/home/jiankai/IdeaProjects/commons-text"));
-        dependencyProject.checkout(endCommitId);
+//        dependencyProject.checkout(endCommitId);
         Collection<Refactoring> refactorings = getRefactorings(dependencyProject, startCommitId, endCommitId);
         Collection<Migration> migrations = getMigrationPaths(refactorings);
         LOGGER.info("Found {} migration paths", migrations.size());
@@ -181,7 +222,7 @@ public class Jama {
                 .readValue(new File(BASE_PATH.toFile(), repoFile), new TypeReference<List<Repo>>() {
                 })
                 .parallelStream()
-                .filter(repo -> repo.stars > 5)
+                .filter(repo -> repo.stars > stars)
                 .filter(shouldSkip(alreadyAnalysedDependents))
                 .map(createRepository(outputDirectory, analysedDependents, projectFactory))
                 .filter(Objects::nonNull)
@@ -280,18 +321,18 @@ public class Jama {
 //            }
 
             try {
-                 if (!usesSignature(repo, signature)) {
-                     LOGGER.warn("Project '{}' does not use signature '{}'", repo.getId(), signature);
-                     return false;
-                 } else {
-                     LOGGER.info("Project '{}' uses signature '{}'", repo.getId(), signature);
+                if (!usesSignature(repo, signature)) {
+                    LOGGER.warn("Project '{}' does not use signature '{}'", repo.getId(), signature);
+                    return false;
+                } else {
+                    LOGGER.info("Project '{}' uses signature '{}'", repo.getId(), signature);
                     return true;
-                 }
+                }
             } catch (Exception e) {
                 LOGGER.error("Something went wrong while checking for signature for project '{}': {}", repo.getId(), e.getMessage());
             }
 
-            return true; //if all fails just assume it's ok
+            return false;
         } catch (Exception e) {
             LOGGER.error("Something went wrong while determining eligibility of project {}: {}", repo.getId(), e.getMessage());
             return false;
